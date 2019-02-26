@@ -23,5 +23,4 @@
     (let [session (-> (r/mk-session)
                       (r/insert (eav/->EAV 10 :foo/uuid "aaa"))
                       (r/fire-rules))]
-      (r/query session query-results) => (just (contains {:?root 10}))
-      (r/query session query-results) => (just (contains {:?data {}})))))
+      (r/query session query-results) => [{:?query `basic-rule, :?root 10, :?data {}}])))

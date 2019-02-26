@@ -13,9 +13,10 @@
         from (nth body 3)
         _ (assert (symbol? from) ":from value is not a symbol")
         where (drop 5 body)
+        qualified-name (symbol (clojure.core/name (ns-name *ns*)) (clojure.core/name name))
         rule-body (concat
                    where
                    ['=>
-                    `(r/insert! (->QueryData nil ~from {}))])]
+                    `(r/insert! (->QueryData '~qualified-name ~from {}))])]
     `(def ~(vary-meta name assoc :rule true)
        ~(dsl/build-rule name rule-body (meta &form)))))
