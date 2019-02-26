@@ -5,7 +5,8 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [clyfe/clara-eav "0.1.6"]
-                 [com.cerner/clara-rules "0.19.0"]]
+                 [com.cerner/clara-rules "0.19.0"]
+                 [edn-query-language/eql "0.0.3"]]
   :profiles {:dev {:dependencies [[midje "1.9.6"]]
                    :plugins [[lein-midje "3.2.1"]]}}
   :repl-options {:init-ns dev})
