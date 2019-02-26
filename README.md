@@ -1,10 +1,28 @@
 # clara-eql
 
-A Clojure library designed to ... well, that part is up to you.
+Generate Clara rules to collect data from EDN Query Language queries.
 
 ## Usage
 
-FIXME
+```clojure
+(require '[net.eraserhead.clara-eql :as clara-eql])
+
+(clara-eql/defrule test-query
+  :query
+  [:person/first-name
+   :person/last-name
+   {:person/supervisor
+    [:person/uuid]}]
+  :from ?eid
+  :where
+  [EAV (= e ?eid) (= a :person/uuid)]
+  [:test (even? ?eid)])
+
+(defrule foo
+  [clara-eql/QueryData (= root 42) (= query 'test-query) (= data ?data)]
+  =>
+  (println "Data is now: " (pr-str ?data)))
+```
 
 ## License
 
