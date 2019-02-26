@@ -7,8 +7,7 @@
 
 (defn parse-rule*
   [query from where properties env]
-  (prn :where where)
-  (dsl/parse-rule* where `((r/insert! (->QueryData nil nil nil))) properties env))
+  (dsl/parse-rule* where `(r/insert! (->QueryData nil nil nil)) properties env))
 
 (defmacro parse-rule
   ([query from where]
