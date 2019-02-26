@@ -1,6 +1,21 @@
 (ns net.eraserhead.clara-eql-test
-  (:require [midje.sweet :refer :all]
-            [net.eraserhead.clara-eql :refer :all]))
+  (:require
+   [midje.sweet :refer :all]
+   [clara.rules :as r]
+   [clara-eav.eav :as eav]
+   [net.eraserhead.clara-eql :refer :all])
+  (:import
+   (clara_eav.eav EAV)
+   (net.eraserhead.clara_eql QueryData)))
 
-(facts "about generating rules"
-  (+ 2 2) => 4)
+(r/defquery query-results
+  []
+  [QueryData (= root ?root) (= query ?query) (= data ?data)])
+
+(facts "about parse-rule"
+  (fact "it generates one result for every match of `:where`"
+    (let [session (-> (r/mk-session
+                       'net.eraserhead.clara-eql-test
+                       [(eval `(parse-rule () ~'?eid ([EAV (= ~'e ~'?eid) (= ~'a :foo/uuid)])))])
+                      (r/fire-rules))]
+      (count (r/query session query-results)) => 0)))
