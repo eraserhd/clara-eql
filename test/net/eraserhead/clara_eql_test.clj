@@ -14,7 +14,7 @@
 
 (facts "about parse-rule"
   (fact "it generates one result for every match of `:where`"
-    (let [r (parse-rule () ?eid ([EAV (= e ?eid) (= a :foo/uuid)]))
+    (let [r (parse-rule [] ?eid ([EAV (= e ?eid) (= a :foo/uuid)]))
           session (-> (r/mk-session 'net.eraserhead.clara-eql-test [r])
                       (r/insert (eav/->EAV 10 :foo/uuid "aaa"))
                       (r/fire-rules))]
