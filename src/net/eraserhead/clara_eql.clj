@@ -1,16 +1,21 @@
 (ns net.eraserhead.clara-eql
   (:require
    [clara.rules :as r]
-   [clara.rules.dsl :as dsl]))
+   [clara.rules.dsl :as dsl]
+   [edn-query-language.core :as eql]))
 
 (defrecord QueryData [query root data])
 
-(defn parse-rule*
-  [query from where properties env]
-  (dsl/parse-rule* where `(r/insert! (->QueryData nil nil nil)) properties env))
-
-(defmacro parse-rule
-  ([query from where]
-   (parse-rule* query from where nil &env))
-  ([query from where properties]
-   (parse-rule* query from where properties &env)))
+(defmacro defrule [name & body]
+  (assert (= :query (first body)) "rule must start with :query")
+  (let [query (second body)
+        _ (assert (= :from (nth body 2)) "rule missing :from in third position")
+        from (nth body 3)
+        _ (assert (symbol? from) ":from value is not a symbol")
+        where (drop 5 body)
+        rule-body (concat
+                   where
+                   ['=>
+                    `(r/insert! (->QueryData nil ~from {}))])]
+    `(def ~(vary-meta name assoc :rule true)
+       ~(dsl/build-rule name rule-body (meta &form)))))

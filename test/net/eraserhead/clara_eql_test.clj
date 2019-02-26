@@ -12,10 +12,16 @@
   []
   [QueryData (= root ?root) (= query ?query) (= data ?data)])
 
+(defrule basic-rule
+  :query []
+  :from ?eid
+  :where
+  [EAV (= e ?eid) (= a :foo/uuid)])
+
 (facts "about parse-rule"
   (fact "it generates one result for every match of `:where`"
-    (let [r (parse-rule [] ?eid ([EAV (= e ?eid) (= a :foo/uuid)]))
-          session (-> (r/mk-session 'net.eraserhead.clara-eql-test [r])
+    (let [session (-> (r/mk-session)
                       (r/insert (eav/->EAV 10 :foo/uuid "aaa"))
                       (r/fire-rules))]
-      (count (r/query session query-results)) => 1)))
+      (r/query session query-results) => (just (contains {:?root 10}))
+      (r/query session query-results) => (just (contains {:?data {}})))))
