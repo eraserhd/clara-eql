@@ -13,7 +13,7 @@
   [QueryData (= root ?root) (= query ?query) (= data ?data)])
 
 (defrule basic-rule
-  :query [:foo/bar]
+  :query [:foo/uuid]
   :from ?eid
   :where
   [EAV (= e ?eid) (= a :foo/uuid)])
@@ -23,4 +23,4 @@
     (let [session (-> (r/mk-session)
                       (r/insert (eav/->EAV 10 :foo/uuid "aaa"))
                       (r/fire-rules))]
-      (r/query session query-results) => [{:?query `basic-rule, :?root 10, :?data {}}])))
+      (r/query session query-results) => [{:?query `basic-rule, :?root 10, :?data {:foo/uuid "aaa"}}])))
