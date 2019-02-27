@@ -17,8 +17,16 @@
 (defn- query-productions [eid-var query]
   (case (:type query)
     :root (mapcat (partial query-productions eid-var) (:children query))
-    :prop `([EAV (= ~'e ~eid-var) (= ~'a ~(:key query)) (= ~'v ~(key->variable (:key query)))])
-    []))
+    :prop `([EAV (= ~'e ~eid-var) (= ~'a ~(:key query)) (= ~'v ~(key->variable (:key query)))])))
+
+(defn- query-structure [query]
+  (case (:type query)
+    :root (reduce
+           (fn [m child-query]
+             (assoc m (:key child-query) (query-structure child-query)))
+           {}
+           (:children query))
+    :prop (key->variable (:key query))))
 
 (s/def ::defrule-args
   (s/cat :rule-name symbol?
@@ -41,4 +49,4 @@
        ~@where
        ~@productions
        ~'=>
-       (r/insert! (->QueryData '~qualified-name ~from {:foo/uuid ~(key->variable :foo/uuid)})))))
+       (r/insert! (->QueryData '~qualified-name ~from ~(query-structure query))))))
