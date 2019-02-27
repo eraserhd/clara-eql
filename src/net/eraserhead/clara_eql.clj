@@ -10,11 +10,14 @@
 
 (defrecord QueryData [query root data])
 
+(defn- key->variable
+  [kw]
+  (symbol (str \? (namespace kw) \_ (name kw))))
+
 (defn- query-productions [eid-var query]
-  (prn :args eid-var query)
   (case (:type query)
     :root (mapcat (partial query-productions eid-var) (:children query))
-    :prop `([EAV (= ~'e ~eid-var) (= ~'a ~(:key query)) (= ~'v ~'?prop-val)])
+    :prop `([EAV (= ~'e ~eid-var) (= ~'a ~(:key query)) (= ~'v ~(key->variable (:key query)))])
     []))
 
 (s/def ::defrule-args
@@ -38,4 +41,4 @@
        ~@where
        ~@productions
        ~'=>
-       (r/insert! (->QueryData '~qualified-name ~from {:foo/uuid ~'?prop-val})))))
+       (r/insert! (->QueryData '~qualified-name ~from {:foo/uuid ~(key->variable :foo/uuid)})))))
