@@ -13,7 +13,7 @@
   [QueryData (= root ?root) (= query ?query) (= data ?data)])
 
 (defrule basic-rule
-  :query []
+  :query [:foo/bar]
   :from ?eid
   :where
   [EAV (= e ?eid) (= a :foo/uuid)])

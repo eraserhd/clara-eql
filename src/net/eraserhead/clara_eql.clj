@@ -21,10 +21,9 @@
 
 (defmacro defrule [rule-name & body]
   (let [{:keys [query from where]} (s/conform ::defrule-args (cons rule-name body))
-        qualified-name (symbol (name (ns-name *ns*)) (name rule-name))
-        rule-body (concat
-                   where
-                   ['=>
-                    `(r/insert! (->QueryData '~qualified-name ~from {}))])]
-    `(def ~(vary-meta rule-name assoc :rule true)
-       ~(dsl/build-rule rule-name rule-body (meta &form)))))
+        query (eql/query->ast (s/unform ::eql/query query))
+        qualified-name (symbol (name (ns-name *ns*)) (name rule-name))]
+    `(r/defrule ~rule-name
+       ~@where
+       ~'=>
+       (r/insert! (->QueryData '~qualified-name ~from {})))))
