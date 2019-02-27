@@ -18,9 +18,21 @@
   :where
   [EAV (= e ?eid) (= a :foo/uuid)])
 
+(defrule missing-property-rule
+  :query [:foo/uuid :foo/missing]
+  :from ?eid
+  :where
+  [EAV (= e ?eid) (= a :foo/uuid)])
+
 (facts "about parse-rule"
   (fact "it generates one result for every match of `:where`"
     (let [session (-> (r/mk-session)
                       (r/insert (eav/->EAV 10 :foo/uuid "aaa"))
                       (r/fire-rules))]
-      (r/query session query-results) => [{:?query `basic-rule, :?root 10, :?data {:foo/uuid "aaa"}}])))
+      (r/query session query-results) => (contains {:?query `basic-rule
+                                                    :?root 10
+                                                    :?data {:foo/uuid "aaa"}})
+      (fact "missing top-level properties don't prevent returning a result"
+        (r/query session query-results) => (contains {:?query `missing-property-rule
+                                                      :?root 10
+                                                      :?data {:foo/uuid "aaa"}})))))

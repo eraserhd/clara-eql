@@ -4,6 +4,7 @@
    [clara.rules.dsl :as dsl]
    [clara-eav.eav :refer :all]
    [clojure.spec.alpha :as s]
+   [clojure.walk :as walk]
    [edn-query-language.core :as eql])
   (:import
    (clara_eav.eav EAV)))
@@ -17,7 +18,9 @@
 (defn- query-productions [eid-var query]
   (case (:type query)
     :root (mapcat (partial query-productions eid-var) (:children query))
-    :prop `([EAV (= ~'e ~eid-var) (= ~'a ~(:key query)) (= ~'v ~(key->variable (:key query)))])))
+    :prop `([:or
+             [EAV (= ~'e ~eid-var) (= ~'a ~(:key query)) (= ~'v ~(key->variable (:key query)))]
+             [:not [EAV (= ~'e ~eid-var) (= ~'a ~(:key query))]]])))
 
 (defn- query-structure [query]
   (case (:type query)
@@ -27,6 +30,17 @@
            {}
            (:children query))
     :prop (key->variable (:key query))))
+
+(defn remove-nil-values [data]
+  (clojure.walk/postwalk
+   (fn [x]
+     (cond->> x
+       (map? x)
+       (reduce-kv
+        (fn [m k v]
+          (cond-> m v (assoc k v)))
+        {})))
+   data))
 
 (s/def ::defrule-args
   (s/cat :rule-name symbol?
@@ -49,4 +63,4 @@
        ~@where
        ~@productions
        ~'=>
-       (r/insert! (->QueryData '~qualified-name ~from ~(query-structure query))))))
+       (r/insert! (->QueryData '~qualified-name ~from (remove-nil-values ~(query-structure query)))))))
