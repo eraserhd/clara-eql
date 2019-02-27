@@ -2,17 +2,25 @@
   (:require
    [clara.rules :as r]
    [clara.rules.dsl :as dsl]
+   [clojure.spec.alpha :as s]
    [edn-query-language.core :as eql]))
 
 (defrecord QueryData [query root data])
 
+(s/def ::defrule-args
+  (s/cat :rule-name symbol?
+         :query-kw  #{:query}
+         :query     ::eql/query
+         :from-kw   #{:from}
+         :from      symbol?
+         :where-kw  #{:where}
+         :where     (s/+ any?)))
+
+(s/fdef defrule
+  :args ::defrule-args)
+
 (defmacro defrule [rule-name & body]
-  (assert (= :query (first body)) "rule must start with :query")
-  (let [query (second body)
-        _ (assert (= :from (nth body 2)) "rule missing :from in third position")
-        from (nth body 3)
-        _ (assert (symbol? from) ":from value is not a symbol")
-        where (drop 5 body)
+  (let [{:keys [query from where]} (s/conform ::defrule-args (cons rule-name body))
         qualified-name (symbol (name (ns-name *ns*)) (name rule-name))
         rule-body (concat
                    where
