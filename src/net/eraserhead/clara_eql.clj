@@ -11,15 +11,13 @@
 
 (defrecord QueryData [query root data])
 
-(defn- key->variable
-  [kw]
+(defn- key->variable [kw]
   (symbol (str \? (namespace kw) \_ (name kw))))
 
-(defn prop-node-productions
-  [eid-var query]
+(defn prop-node-productions [eid-var query]
   (let [attr-var (:key query)
         val-var  (key->variable (:key query))]
-    (if (:params query)
+    (if (-> query :params (get 'many-valued?))
       `([~val-var ~'<- (acc/all :v) :from [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]])
       `([:or
          [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
