@@ -50,6 +50,8 @@
 
 (s/def ::defrule-args
   (s/cat :rule-name symbol?
+         :doc (s/? string?)
+         :properties (s/? map?)
          :query-kw  #{:query}
          :query     ::eql/query
          :from-kw   #{:from}
@@ -61,11 +63,16 @@
   :args ::defrule-args)
 
 (defmacro defrule [rule-name & body]
-  (let [{:keys [query from where]} (s/conform ::defrule-args (cons rule-name body))
-        query (eql/query->ast (s/unform ::eql/query query))
+  (let [{:keys [query from where doc properties]}
+        (s/conform ::defrule-args (cons rule-name body))
+        query          (eql/query->ast (s/unform ::eql/query query))
         qualified-name (symbol (name (ns-name *ns*)) (name rule-name))
-        productions (query-productions from query)]
+        productions    (query-productions from query)
+        doc (or doc "")
+        properties (or properties {})]
     `(r/defrule ~rule-name
+       ~doc
+       ~properties
        ~@where
        ~@productions
        ~'=>

@@ -13,12 +13,15 @@
   [QueryData (= root ?root) (= query ?query) (= data ?data)])
 
 (defrule basic-rule
+  "Some basic rule"
+  {:salience 100}
   :query [:foo/uuid]
   :from ?eid
   :where
   [EAV (= e ?eid) (= a :foo/uuid)])
 
 (defrule missing-property-rule
+  "Missing property rule"
   :query [:foo/uuid :foo/missing]
   :from ?eid
   :where
