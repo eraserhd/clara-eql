@@ -1,7 +1,7 @@
 # clara-eql
 
 Generate Clara rules to collect data from EDN Query Language queries.
-
+[![CircleCI](https://circleci.com/gh/eraserhd/clara-eql.svg?style=svg)](https://circleci.com/gh/eraserhd/clara-eql)
 ## Usage
 
 ```clojure
