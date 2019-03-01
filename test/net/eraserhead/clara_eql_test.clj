@@ -50,12 +50,12 @@
                                 :?root 10
                                 :?data {:foo/uuid "aaa"}})))
       (facts "about cardinality-many keys"
-        (future-fact "returns all values for a cardinality-many key"
+        (fact "returns all values for a cardinality-many key"
           results => (contains {:?query `many-valued-key
                                 :?root 10
                                 :?data {:foo/uuid "aaa"
                                         :foo/many-valued [1 2]}}))
-        (future-fact "returns an empty set for a cardinality-many key if no values are present"
+        (fact "returns an empty set for a cardinality-many key if no values are present"
           results => (contains {:?query `many-valued-key
                                 :?root 20
                                 :?data {:foo/uuid "bbb"

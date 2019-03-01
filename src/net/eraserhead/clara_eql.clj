@@ -1,7 +1,7 @@
 (ns net.eraserhead.clara-eql
   (:require
    [clara.rules :as r]
-   [clara.rules.dsl :as dsl]
+   [clara.rules.accumulators :as acc]
    [clara-eav.eav :refer :all]
    [clojure.spec.alpha :as s]
    [clojure.walk :as walk]
@@ -18,9 +18,12 @@
 (defn- query-productions [eid-var query]
   (case (:type query)
     :root (mapcat (partial query-productions eid-var) (:children query))
-    :prop `([:or
-             [EAV (= ~'e ~eid-var) (= ~'a ~(:key query)) (= ~'v ~(key->variable (:key query)))]
-             [:not [EAV (= ~'e ~eid-var) (= ~'a ~(:key query))]]])))
+    :prop (if (:params query)
+            `([~(key->variable (:key query)) ~'<- (acc/all :v) :from [EAV (= ~'e ~eid-var) (= ~'a ~(:key query))]])
+
+            `([:or
+               [EAV (= ~'e ~eid-var) (= ~'a ~(:key query)) (= ~'v ~(key->variable (:key query)))]
+               [:not [EAV (= ~'e ~eid-var) (= ~'a ~(:key query))]]]))))
 
 (defn- query-structure [query]
   (case (:type query)
