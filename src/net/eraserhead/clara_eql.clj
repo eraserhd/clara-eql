@@ -15,15 +15,20 @@
   [kw]
   (symbol (str \? (namespace kw) \_ (name kw))))
 
+(defn prop-node-productions
+  [eid-var query]
+  (let [attr-var (:key query)
+        val-var  (key->variable (:key query))]
+    (if (:params query)
+      `([~val-var ~'<- (acc/all :v) :from [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]])
+      `([:or
+         [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
+         [:not [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]))))
+
 (defn- query-productions [eid-var query]
   (case (:type query)
     :root (mapcat (partial query-productions eid-var) (:children query))
-    :prop (if (:params query)
-            `([~(key->variable (:key query)) ~'<- (acc/all :v) :from [EAV (= ~'e ~eid-var) (= ~'a ~(:key query))]])
-
-            `([:or
-               [EAV (= ~'e ~eid-var) (= ~'a ~(:key query)) (= ~'v ~(key->variable (:key query)))]
-               [:not [EAV (= ~'e ~eid-var) (= ~'a ~(:key query))]]]))))
+    :prop (prop-node-productions eid-var query)))
 
 (defn- query-structure [query]
   (case (:type query)
