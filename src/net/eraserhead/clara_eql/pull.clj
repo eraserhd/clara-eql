@@ -1,4 +1,4 @@
-(ns net.eraserhead.clara-eav-pull
+(ns net.eraserhead.clara-eql.pull
   (:require
    [clara.rules :refer :all]
    [clara-eav.eav :as eav]
@@ -28,7 +28,6 @@
   [:?attribute :?value]
   [EAV (= e ?attribute) (= a :db/unique) (= v :db.unique/identity)]
   [EAV (= e ?eid) (= a ?attribute) (= v ?value)])
-
 
 (defn entid [session entity-ref]
   (if (coll? entity-ref)

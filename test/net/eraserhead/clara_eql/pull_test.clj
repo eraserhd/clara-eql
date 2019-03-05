@@ -1,12 +1,12 @@
-(ns net.eraserhead.clara-eav-pull-test
+(ns net.eraserhead.clara-eql.pull-test
   (:require
    [clara.rules :as r]
    [clara-eav.eav :as eav]
    [midje.sweet :refer :all]
-   [net.eraserhead.clara-eav-pull :as pull]))
+   [net.eraserhead.clara-eql.pull :as pull]))
 
 (facts "about pull"
-  (let [session (-> (r/mk-session 'net.eraserhead.clara-eav-pull)
+  (let [session (-> (r/mk-session 'net.eraserhead.clara-eql.pull)
                     (r/insert
                      (eav/->EAV 10 :foo/uuid "aaa")
                      (eav/->EAV 10 :foo/name "a-name")
