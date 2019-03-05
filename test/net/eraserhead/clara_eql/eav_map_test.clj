@@ -1,10 +1,11 @@
-(ns net.eraserhead.clara-eav-map-test
+(ns net.eraserhead.clara-eql.eav-map-test
   (:require
    [clara-eav.eav :as eav]
    [medley.core :as medley]
    [midje.sweet :refer :all]
-   [net.eraserhead.clara-eav-map :refer [eav-map]])
-  (:import (clara_eav.eav EAV)))
+   [net.eraserhead.clara-eql.eav-map :refer [eav-map]])
+  (:import
+   (clara_eav.eav EAV)))
 
 (def initial-value (:initial-value eav-map))
 (def reduce-fn (:reduce-fn eav-map))

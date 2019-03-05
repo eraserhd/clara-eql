@@ -3,7 +3,7 @@
    [clara.rules :refer :all]
    [clara-eav.eav :as eav]
    [edn-query-language.core :as eql]
-   [net.eraserhead.clara-eav-map :as eav-map])
+   [net.eraserhead.clara-eql.eav-map :as eav-map])
   (:import
    (clara_eav.eav EAV)))
 

@@ -1,4 +1,4 @@
-(ns net.eraserhead.clara-eav-map
+(ns net.eraserhead.clara-eql.eav-map
   (:require
    [clara.rules.accumulators :as acc]
    [medley.core :as medley]))
