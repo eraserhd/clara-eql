@@ -1,4 +1,4 @@
-(ns net.eraserhead.clara-eql
+(ns net.eraserhead.clara-eql.core
   (:require
    [clara.rules :as r]
    [clara.rules.accumulators :as acc]

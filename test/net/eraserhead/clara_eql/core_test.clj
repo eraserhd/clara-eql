@@ -1,12 +1,12 @@
-(ns net.eraserhead.clara-eql-test
+(ns net.eraserhead.clara-eql.core-test
   (:require
    [midje.sweet :refer :all]
    [clara.rules :as r]
    [clara-eav.eav :as eav]
-   [net.eraserhead.clara-eql :refer :all])
+   [net.eraserhead.clara-eql.core :refer :all])
   (:import
    (clara_eav.eav EAV)
-   (net.eraserhead.clara_eql QueryData)))
+   (net.eraserhead.clara_eql.core QueryData)))
 
 (r/defquery query-results
   []
