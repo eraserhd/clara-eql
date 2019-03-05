@@ -53,7 +53,8 @@
   (partial merge-with (partial merge-with concat)))
 
 (def eav-map
-  (acc/accum {:initial-value {}
-              :reduce-fn reduce-fn
-              :retract-fn retract-fn
-              :combine-fn combine-fn}))
+  (acc/accum
+   {:initial-value {}
+    :reduce-fn     reduce-fn
+    :retract-fn    retract-fn
+    :combine-fn    combine-fn}))

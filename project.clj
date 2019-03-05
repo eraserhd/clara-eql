@@ -7,7 +7,7 @@
                  [clyfe/clara-eav "0.1.6"]
                  [com.cerner/clara-rules "0.19.0"]
                  [edn-query-language/eql "0.0.3"]
-                 [medley "1.0.0"]]
+                 [medley "1.1.0"]]
   :profiles {:dev
              {:dependencies [[midje "1.9.6"]]
               :plugins      [[lein-midje "3.2.1"]]}}
