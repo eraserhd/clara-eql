@@ -1,7 +1,6 @@
 (ns net.eraserhead.clara-eql.eav-map-test
   (:require
    [clara-eav.eav :as eav]
-   [medley.core :as medley]
    [midje.sweet :refer :all]
    [net.eraserhead.clara-eql.eav-map :refer [eav-map]])
   (:import
