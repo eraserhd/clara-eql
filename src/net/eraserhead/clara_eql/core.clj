@@ -48,16 +48,21 @@
         {})))
    data))
 
+(defn- variable? [x]
+  (and (symbol? x)
+       (nil? (namespace x))
+       (= \? (get (name x) 0))))
+
 (s/def ::defrule-args
-  (s/cat :rule-name symbol?
-         :doc (s/? string?)
+  (s/cat :rule-name  symbol?
+         :doc        (s/? string?)
          :properties (s/? map?)
-         :query-kw  #{:query}
-         :query     ::eql/query
-         :from-kw   #{:from}
-         :from      symbol?
-         :where-kw  #{:where}
-         :where     (s/+ any?)))
+         :query-kw   #{:query}
+         :query      ::eql/query
+         :from-kw    #{:from}
+         :from       variable?
+         :where-kw   #{:where}
+         :where      (s/+ any?)))
 
 (s/fdef defrule
   :args ::defrule-args)

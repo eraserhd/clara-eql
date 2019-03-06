@@ -3,10 +3,13 @@
    [midje.sweet :refer :all]
    [clara.rules :as r]
    [clara-eav.eav :as eav]
+   [clojure.spec.test.alpha]
    [net.eraserhead.clara-eql.core :refer :all])
   (:import
    (clara_eav.eav EAV)
    (net.eraserhead.clara_eql.core QueryData)))
+
+(clojure.spec.test.alpha/instrument)
 
 (r/defquery query-results
   []
