@@ -65,7 +65,23 @@
   :args ::defrule-args)
 
 (defmacro defrule
-  ""
+  "Define a Clara rule to tally an eql query
+
+  For example:
+
+    (defrule sample-rule
+      \"Find results such as {:foo/uuid ... :foo/bar {:bar/name \\\"aname\\\"}}\"
+      :query [:foo/uuid {:foo/bar [:bar/name]}]
+      :from ?eid
+      :where
+      [EAV (= e ?eid) (= a :foo/uuid)])
+
+  Results are insert in QueryData facts with the following fields:
+
+    query - A fully-qualified symbol naming the query (e.g. sample-ns/sample-rule)
+    root  - The root from which the data was pulled (the values of ?eid above)
+    data  - The resulting query data.
+  "
   [rule-name & body]
   (let [{:keys [query from where doc properties]}
         (s/conform ::defrule-args (cons rule-name body))
