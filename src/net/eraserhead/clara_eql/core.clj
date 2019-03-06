@@ -49,8 +49,7 @@
    data))
 
 (defn- variable? [x]
-  (and (symbol? x)
-       (nil? (namespace x))
+  (and (simple-symbol? x)
        (= \? (get (name x) 0))))
 
 (s/def ::defrule-args
