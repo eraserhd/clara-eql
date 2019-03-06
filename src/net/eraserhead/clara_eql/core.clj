@@ -48,9 +48,7 @@
         {})))
    data))
 
-(defn- variable? [x]
-  (and (simple-symbol? x)
-       (= \? (get (name x) 0))))
+(s/def ::variable (s/and simple-symbol? #(= \? (get (name %) 0))))
 
 (s/def ::defrule-args
   (s/cat :rule-name  symbol?
@@ -59,14 +57,16 @@
          :query-kw   #{:query}
          :query      ::eql/query
          :from-kw    #{:from}
-         :from       variable?
+         :from       ::variable
          :where-kw   #{:where}
          :where      (s/+ any?)))
 
 (s/fdef defrule
   :args ::defrule-args)
 
-(defmacro defrule [rule-name & body]
+(defmacro defrule
+  ""
+  [rule-name & body]
   (let [{:keys [query from where doc properties]}
         (s/conform ::defrule-args (cons rule-name body))
         query          (eql/query->ast (s/unform ::eql/query query))
