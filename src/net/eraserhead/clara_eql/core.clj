@@ -17,11 +17,15 @@
 (defn prop-node-productions [eid-var query]
   (let [attr-var (:key query)
         val-var  (key->variable (:key query))]
-    (if (-> query :params (get 'many-valued?))
-      `([~val-var ~'<- (acc/all :v) :from [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]])
-      `([:or
-         [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
-         [:not [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]))))
+    `([:or
+       [:and
+         [EAV (= ~'e ~attr-var) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]
+         [~val-var ~'<- (acc/all :v) :from [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]
+       [:and
+         [:not [EAV (= ~'e ~attr-var) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
+         [:or
+           [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
+           [:not [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]]])))
 
 (defn join-node-production
   [eid-var query]

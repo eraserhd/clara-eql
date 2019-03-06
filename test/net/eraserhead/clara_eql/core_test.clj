@@ -31,8 +31,7 @@
   [EAV (= e ?eid) (= a :foo/uuid)])
 
 (defrule many-valued-key
-  :query [:foo/uuid
-          (:foo/many-valued {many-valued? true})]
+  :query [:foo/uuid :foo/many-valued]
   :from ?eid
   :where
   [EAV (= e ?eid) (= a :foo/uuid)])
@@ -45,7 +44,8 @@
 
 (facts "about parse-rule"
   (let [session (-> (r/mk-session)
-                    (r/insert (eav/->EAV 10 :foo/uuid "aaa")
+                    (r/insert (eav/->EAV :foo/many-valued :db/cardinality :db.cardinality/many)
+                              (eav/->EAV 10 :foo/uuid "aaa")
                               (eav/->EAV 10 :foo/many-valued 1)
                               (eav/->EAV 10 :foo/many-valued 2)
                               (eav/->EAV 20 :foo/uuid "bbb")
