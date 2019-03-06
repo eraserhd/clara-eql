@@ -23,10 +23,20 @@
          [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
          [:not [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]))))
 
+(defn join-node-production
+  [eid-var query]
+  (let [attr-var (:key query)
+        val-var  (key->variable (:key query))]
+    `([:or
+       [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
+       [:not [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]
+      ~@(mapcat (partial prop-node-productions val-var) (:children query)))))
+
 (defn- query-productions [eid-var query]
   (case (:type query)
     :root (mapcat (partial query-productions eid-var) (:children query))
-    :prop (prop-node-productions eid-var query)))
+    :prop (prop-node-productions eid-var query)
+    :join (join-node-production eid-var query)))
 
 (defn- query-structure [query]
   (case (:type query)
@@ -35,7 +45,12 @@
              (assoc m (:key child-query) (query-structure child-query)))
            {}
            (:children query))
-    :prop (key->variable (:key query))))
+    :prop (key->variable (:key query))
+    :join (reduce
+           (fn [m child-query]
+             (assoc m (:key child-query) (query-structure child-query)))
+           {}
+           (:children query))))
 
 (defn remove-nil-values [data]
   (clojure.walk/postwalk
@@ -88,8 +103,8 @@
         query          (eql/query->ast (s/unform ::eql/query query))
         qualified-name (symbol (name (ns-name *ns*)) (name rule-name))
         productions    (query-productions from query)
-        doc (or doc "")
-        properties (or properties {})]
+        doc            (or doc "")
+        properties     (or properties {})]
     `(r/defrule ~rule-name
        ~doc
        ~properties
