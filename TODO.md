@@ -1,9 +1,8 @@
 # TODO
 
-- [ ] Move rules/pull and eav-map into this project
-- [ ] Configure CircleCI
-- [ ] Add ability to pass properties through to defrule
-- [ ] Add ability to pass docstring through to defrule
 - [ ] Add a docstring to defrule itself
+- [ ] Remove dependency on medley
 - [ ] We should have a predicate variable? which means a symbol which starts with a question mark,
       for the :from spec.
+- [ ] Figure out how eav-map can handle reverse attributes in a way that isn't a Datomicism, e.g.
+      a :db/reverse-attribute ?
