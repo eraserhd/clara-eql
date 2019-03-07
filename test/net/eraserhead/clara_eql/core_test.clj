@@ -36,11 +36,17 @@
   :where
   [EAV (= e ?eid) (= a :foo/uuid)])
 
-(defrule basic-rule-join
+(defrule basic-join-rule
   :query [{:foo/bar [:bar/uuid]}]
   :from ?eid
   :where
   [EAV (= e ?eid) (= a :foo/bar)])
+
+(defrule nested-join-rule
+  :query [{:a/b [{:b/c [:c/d]}]}]
+  :from ?eid
+  :where
+  [EAV (= e ?eid) (= a :a/b)])
 
 (facts "about parse-rule"
   (let [session (-> (r/mk-session)
@@ -50,7 +56,10 @@
                               (eav/->EAV 10 :foo/many-valued 2)
                               (eav/->EAV 20 :foo/uuid "bbb")
                               (eav/->EAV 30 :foo/bar 40)
-                              (eav/->EAV 40 :bar/uuid "ccc"))
+                              (eav/->EAV 40 :bar/uuid "ccc")
+                              (eav/->EAV 50 :a/b 60)
+                              (eav/->EAV 60 :b/c 70)
+                              (eav/->EAV 70 :c/d "world"))
                     (r/fire-rules))
         results (r/query session query-results)]
     (facts "about top-level keys"
@@ -76,8 +85,12 @@
                                          :foo/many-valued []}}))))
     (facts "about joins"
       (fact "returns joined values"
-        results => (contains {:?query `basic-rule-join
+        results => (contains {:?query `basic-join-rule
                               :?root   30
-                              :?data   {:foo/bar {:bar/uuid "ccc"}}})))
+                              :?data   {:foo/bar {:bar/uuid "ccc"}}}))
+      (fact "returns nested joins"
+        results => (contains {:?query `nested-join-rule
+                              :?root 50
+                              :?data {:a/b {:b/c {:c/d "world"}}}})))
     (facts "about unions"
       (future-fact "returns values from all branches of the union"))))

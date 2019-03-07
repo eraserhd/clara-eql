@@ -19,28 +19,24 @@
         val-var  (key->variable (:key query))]
     `([:or
        [:and
-         [EAV (= ~'e ~attr-var) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]
-         [~val-var ~'<- (acc/all :v) :from [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]
+        [EAV (= ~'e ~attr-var) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]
+        [~val-var ~'<- (acc/all :v) :from [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]
        [:and
-         [:not [EAV (= ~'e ~attr-var) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
-         [:or
-           [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
-           [:not [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]]])))
-
-(defn join-node-production
-  [eid-var query]
-  (let [attr-var (:key query)
-        val-var  (key->variable (:key query))]
-    `([:or
-       [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
-       [:not [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]
-      ~@(mapcat (partial prop-node-productions val-var) (:children query)))))
+        [:not [EAV (= ~'e ~attr-var) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
+        [:or
+         [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
+         [:not [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]]])))
 
 (defn- query-productions [eid-var query]
   (case (:type query)
     :root (mapcat (partial query-productions eid-var) (:children query))
     :prop (prop-node-productions eid-var query)
-    :join (join-node-production eid-var query)))
+    :join (let [attr-var (:key query)
+                val-var (key->variable (:key query))]
+            `([:or
+               [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
+               [:not [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]
+              ~@(mapcat (partial query-productions val-var) (:children query))))))
 
 (defn- query-structure [query]
   (case (:type query)
