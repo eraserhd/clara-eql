@@ -48,12 +48,20 @@
   :where
   [EAV (= e ?eid) (= a :a/b)])
 
-(facts "about parse-rule"
+(defrule many-valued-join
+  :query [{:foo/many-valued [:bar/name]}]
+  :from ?eid
+  :where
+  [EAV (= e ?eid) (= a :foo/uuid) (= v "aaa")])
+
+(facts "about defrule"
   (let [session (-> (r/mk-session)
                     (r/insert (eav/->EAV :foo/many-valued :db/cardinality :db.cardinality/many)
                               (eav/->EAV 10 :foo/uuid "aaa")
-                              (eav/->EAV 10 :foo/many-valued 1)
-                              (eav/->EAV 10 :foo/many-valued 2)
+                              (eav/->EAV 10 :foo/many-valued 11)
+                              (eav/->EAV 11 :bar/name "b11")
+                              (eav/->EAV 12 :bar/name "b12")
+                              (eav/->EAV 10 :foo/many-valued 12)
                               (eav/->EAV 20 :foo/uuid "bbb")
                               (eav/->EAV 30 :foo/bar 40)
                               (eav/->EAV 40 :bar/uuid "ccc")
@@ -77,7 +85,7 @@
           results => (contains {:?query `many-valued-key
                                 :?root  10
                                 :?data  {:foo/uuid        "aaa"
-                                         :foo/many-valued [1 2]}}))
+                                         :foo/many-valued [11 12]}}))
         (fact "returns an empty set for a cardinality-many key if no values are present"
           results => (contains {:?query `many-valued-key
                                 :?root  20
@@ -88,9 +96,14 @@
         results => (contains {:?query `basic-join-rule
                               :?root   30
                               :?data   {:foo/bar {:bar/uuid "ccc"}}}))
-      (fact "returns nested joins"
+      (fact "returns nested join values"
         results => (contains {:?query `nested-join-rule
                               :?root 50
-                              :?data {:a/b {:b/c {:c/d "world"}}}})))
+                              :?data {:a/b {:b/c {:c/d "world"}}}}))
+      (future-fact "returns collections for many-valued nested join values"
+        results => (contains {:?query `many-valued-join
+                              :?root 50
+                              :?data {:foo/many-valued [{:bar/name "b11"}
+                                                        {:bar/name "b12"}]}})))
     (facts "about unions"
       (future-fact "returns values from all branches of the union"))))
