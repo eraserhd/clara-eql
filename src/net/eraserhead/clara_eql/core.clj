@@ -39,13 +39,13 @@
               ~@(mapcat (partial query-productions val-var) (:children query))))))
 
 (defn- query-structure [query]
-  (condp contains? (:type query)
-    #{:root :join} (reduce
-                    (fn [m child-query]
-                      (assoc m (:key child-query) (query-structure child-query)))
-                    {}
-                    (:children query))
-    #{:prop}       (key->variable (:key query))))
+  (case (:type query)
+    (:root :join) (reduce
+                   (fn [m child-query]
+                     (assoc m (:key child-query) (query-structure child-query)))
+                   {}
+                   (:children query))
+    :prop         (key->variable (:key query))))
 
 (defn remove-nil-values [data]
   (clojure.walk/postwalk
