@@ -13,7 +13,7 @@
 
 (r/defquery query-results
   []
-  [QueryData (= root ?root) (= query ?query) (= data ?data)])
+  [QueryData (= e ?root) (= query ?query) (= data ?data)])
 
 (defrule basic-rule
   "Some basic rule"
