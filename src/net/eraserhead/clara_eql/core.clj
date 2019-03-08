@@ -27,7 +27,7 @@
          [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
          [:not [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]]])))
 
-(defn- query-productions [eid-var query]
+(defn- query-productions [qualified-name eid-var query]
   (case (:type query)
     :root (mapcat (partial query-productions eid-var) (:children query))
     :prop (prop-node-productions eid-var query)
@@ -36,7 +36,7 @@
             `([:or
                [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
                [:not [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]
-              ~@(mapcat (partial query-productions val-var) (:children query))))))
+              ~@(mapcat (partial query-productions qualified-name val-var) (:children query))))))
 
 (defn- query-structure [query]
   (case (:type query)
@@ -73,7 +73,7 @@
 
 (defn- rule-code
   [qualified-name query from where doc properties]
-  (let [productions (mapcat (partial query-productions from) (:children query))]
+  (let [productions (mapcat (partial query-productions qualified-name from) (:children query))]
     (concat
      (mapcat (fn [child-query]
                (when (= :join (:type child-query))
