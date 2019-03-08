@@ -73,14 +73,27 @@
 
 (defn- rule-code
   [qualified-name query from where doc properties]
-  (let [productions (query-productions from query)]
-    `(r/defrule ~(symbol (name qualified-name))
-       ~doc
-       ~properties
-       ~@where
-       ~@productions
-       ~'=>
-       (r/insert! (->QueryData '~qualified-name ~from (remove-nil-values ~(query-structure query)))))))
+  (let [productions (mapcat (partial query-productions from) (:children query))]
+    (concat
+     (mapcat (fn [child-query]
+               (when (= :join (:type child-query))
+                 (rule-code (symbol (namespace qualified-name)
+                                    (str (name qualified-name) (name (key->variable (:key child-query)))))
+                            child-query
+                            (key->variable (:key child-query))
+                            (concat
+                             where
+                             [`[EAV (= ~'e ~from) (= ~'a ~(:key child-query)) (= ~'v ~(key->variable (:key child-query)))]])
+                            doc
+                            properties)))
+             (:children query))
+     [`(r/defrule ~(symbol (name qualified-name))
+         ~doc
+         ~properties
+         ~@where
+         ~@productions
+         ~'=>
+         (r/insert! (->QueryData '~qualified-name ~from (remove-nil-values ~(query-structure query)))))])))
 
 (s/fdef defrule
   :args ::defrule-args)
@@ -110,4 +123,4 @@
         qualified-name (symbol (name (ns-name *ns*)) (name rule-name))
         doc            (or doc "")
         properties     (or properties {})]
-    (rule-code qualified-name query from where doc properties)))
+    `(do ~@(rule-code qualified-name query from where doc properties))))
