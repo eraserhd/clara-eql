@@ -32,20 +32,26 @@
     :root (mapcat (partial query-productions eid-var) (:children query))
     :prop (prop-node-productions eid-var query)
     :join (let [attr-var (:key query)
-                val-var (key->variable (:key query))]
+                val-var (key->variable (:key query))
+                subquery-name (symbol (namespace qualified-name)
+                                      (str (name qualified-name) (name (key->variable (:key query)))))]
             `([:or
-               [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
-               [:not [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]
-              ~@(mapcat (partial query-productions qualified-name val-var) (:children query))))))
+               [:and
+                [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
+                [QueryData (= ~'root ?root#) (= ~'query '~subquery-name) (= ~'data ~val-var)]]
+               [:not
+                [:and
+                 [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
+                 [QueryData (= ~'root ?root#) (= ~'query '~subquery-name)]]]]))))
 
 (defn- query-structure [query]
   (case (:type query)
     (:root :join) (reduce
                    (fn [m child-query]
-                     (assoc m (:key child-query) (query-structure child-query)))
+                     (assoc m (:key child-query) (key->variable (:key child-query))))
                    {}
                    (:children query))
-    :prop         (key->variable (:key query))))
+    (:prop)      (key->variable (:key query))))
 
 (defn remove-nil-values [data]
   (clojure.walk/postwalk
