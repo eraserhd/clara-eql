@@ -14,7 +14,7 @@
 (defn- key->variable [kw]
   (symbol (str \? (namespace kw) \_ (name kw))))
 
-(defn prop-node-productions [eid-var query]
+(defn- prop-node-productions [eid-var query]
   (let [attr-var (:key query)
         val-var  (key->variable (:key query))]
     `([:or
@@ -27,22 +27,25 @@
          [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
          [:not [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]]])))
 
+(defn- join-node-productions [qualified-name eid-var query]
+  (let [attr-var (:key query)
+        val-var (key->variable (:key query))
+        subquery-name (symbol (namespace qualified-name)
+                              (str (name qualified-name) (name (key->variable (:key query)))))]
+    `([:or
+       [:and
+        [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
+        [QueryData (= ~'root ?root#) (= ~'query '~subquery-name) (= ~'data ~val-var)]]
+       [:not
+        [:and
+         [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
+         [QueryData (= ~'root ?root#) (= ~'query '~subquery-name)]]]])))
+
 (defn- query-productions [qualified-name eid-var query]
   (case (:type query)
     :root (mapcat (partial query-productions eid-var) (:children query))
     :prop (prop-node-productions eid-var query)
-    :join (let [attr-var (:key query)
-                val-var (key->variable (:key query))
-                subquery-name (symbol (namespace qualified-name)
-                                      (str (name qualified-name) (name (key->variable (:key query)))))]
-            `([:or
-               [:and
-                [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
-                [QueryData (= ~'root ?root#) (= ~'query '~subquery-name) (= ~'data ~val-var)]]
-               [:not
-                [:and
-                 [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
-                 [QueryData (= ~'root ?root#) (= ~'query '~subquery-name)]]]]))))
+    :join (join-node-productions qualified-name eid-var query)))
 
 (defn- query-structure [query]
   (case (:type query)
