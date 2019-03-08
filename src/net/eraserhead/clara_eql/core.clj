@@ -51,13 +51,10 @@
     :join (join-node-productions qualified-name eid-var query)))
 
 (defn- query-structure [query]
-  (case (:type query)
-    (:root :join) (reduce
-                   (fn [m child-query]
-                     (assoc m (:key child-query) (key->variable (:key child-query))))
-                   {}
-                   (:children query))
-    (:prop)      (key->variable (:key query))))
+  (reduce (fn [m child-query]
+            (assoc m (:key child-query) (key->variable (:key child-query))))
+          {}
+          (:children query)))
 
 (defn remove-nil-values [data]
   (clojure.walk/postwalk
