@@ -14,6 +14,10 @@
 (defn- key->variable [kw]
   (symbol (str \? (namespace kw) \_ (name kw))))
 
+(defn- subquery-name [qualified-name query]
+  (symbol (namespace qualified-name)
+          (str (name qualified-name) (name (key->variable (:key query))))))
+
 (defn- prop-node-productions [eid-var query]
   (let [attr-var (:key query)
         val-var  (key->variable (:key query))]
@@ -30,8 +34,7 @@
 (defn- join-node-productions [qualified-name eid-var query]
   (let [attr-var (:key query)
         val-var (key->variable (:key query))
-        subquery-name (symbol (namespace qualified-name)
-                              (str (name qualified-name) (name (key->variable (:key query)))))]
+        subquery-name (subquery-name qualified-name query)]
     `([:or
        [:and
         [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
@@ -86,8 +89,7 @@
     (concat
      (mapcat (fn [child-query]
                (when (= :join (:type child-query))
-                 (rule-code (symbol (namespace qualified-name)
-                                    (str (name qualified-name) (name (key->variable (:key child-query)))))
+                 (rule-code (subquery-name qualified-name child-query)
                             child-query
                             (key->variable (:key child-query))
                             (concat
