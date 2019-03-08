@@ -71,6 +71,17 @@
          :where-kw   #{:where}
          :where      (s/+ any?)))
 
+(defn- rule-code
+  [qualified-name query from where doc properties]
+  (let [productions (query-productions from query)]
+    `(r/defrule ~(symbol (name qualified-name))
+       ~doc
+       ~properties
+       ~@where
+       ~@productions
+       ~'=>
+       (r/insert! (->QueryData '~qualified-name ~from (remove-nil-values ~(query-structure query)))))))
+
 (s/fdef defrule
   :args ::defrule-args)
 
@@ -97,13 +108,6 @@
         (s/conform ::defrule-args (cons rule-name body))
         query          (eql/query->ast (s/unform ::eql/query query))
         qualified-name (symbol (name (ns-name *ns*)) (name rule-name))
-        productions    (query-productions from query)
         doc            (or doc "")
         properties     (or properties {})]
-    `(r/defrule ~rule-name
-       ~doc
-       ~properties
-       ~@where
-       ~@productions
-       ~'=>
-       (r/insert! (->QueryData '~qualified-name ~from (remove-nil-values ~(query-structure query)))))))
+    (rule-code qualified-name query from where doc properties)))
