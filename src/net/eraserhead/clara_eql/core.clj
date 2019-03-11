@@ -9,7 +9,7 @@
   (:import
    (clara_eav.eav EAV)))
 
-(defrecord QueryData [query e data])
+(defrecord QueryResult [query e data])
 
 (defn- key->variable [kw]
   (symbol (str \? (namespace kw) \_ (name kw))))
@@ -38,11 +38,11 @@
     `([:or
        [:and
         [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
-        [QueryData (= ~'e ?root#) (= ~'query '~subquery-name) (= ~'data ~val-var)]]
+        [QueryResult (= ~'e ?root#) (= ~'query '~subquery-name) (= ~'data ~val-var)]]
        [:not
         [:and
          [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
-         [QueryData (= ~'e ?root#) (= ~'query '~subquery-name)]]]])))
+         [QueryResult (= ~'e ?root#) (= ~'query '~subquery-name)]]]])))
 
 (defn- query-productions [qualified-name eid-var query]
   (case (:type query)
@@ -101,7 +101,7 @@
          ~@where
          ~@productions
          ~'=>
-         (r/insert! (->QueryData '~qualified-name ~from (remove-nil-values ~(query-structure query)))))])))
+         (r/insert! (->QueryResult '~qualified-name ~from (remove-nil-values ~(query-structure query)))))])))
 
 (s/fdef defrule
   :args ::defrule-args)
@@ -118,7 +118,7 @@
       :where
       [EAV (= e ?eid) (= a :foo/uuid)])
 
-  Results are insert in QueryData facts with the following fields:
+  Results are insert in QueryResult facts with the following fields:
 
     query - A fully-qualified symbol naming the query (e.g. sample-ns/sample-rule)
     root  - The root from which the data was pulled (the values of ?eid above)

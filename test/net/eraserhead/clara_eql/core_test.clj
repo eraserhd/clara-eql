@@ -7,13 +7,13 @@
    [net.eraserhead.clara-eql.core :refer :all])
   (:import
    (clara_eav.eav EAV)
-   (net.eraserhead.clara_eql.core QueryData)))
+   (net.eraserhead.clara_eql.core QueryResult)))
 
 (clojure.spec.test.alpha/instrument)
 
 (r/defquery query-results
   []
-  [QueryData (= e ?root) (= query ?query) (= data ?data)])
+  [QueryResult (= e ?root) (= query ?query) (= data ?data)])
 
 (defrule basic-rule
   "Some basic rule"

@@ -20,7 +20,7 @@ Generate Clara rules to collect data from EDN Query Language queries.
   [:test (even? ?eid)])
 
 (defrule foo
-  [clara-eql/QueryData (= root 42) (= query 'test-query) (= data ?data)]
+  [clara-eql/QueryResult (= root 42) (= query 'test-query) (= data ?data)]
   =>
   (println "Data is now: " (pr-str ?data)))
 ```
