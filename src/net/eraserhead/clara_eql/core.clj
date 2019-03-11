@@ -9,7 +9,7 @@
   (:import
    (clara_eav.eav EAV)))
 
-(defrecord QueryResult [query e data])
+(defrecord QueryResult [query e result])
 
 (defn- key->variable [kw]
   (symbol (str \? (namespace kw) \_ (name kw))))
@@ -38,7 +38,7 @@
     `([:or
        [:and
         [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
-        [QueryResult (= ~'e ?root#) (= ~'query '~subquery-name) (= ~'data ~val-var)]]
+        [QueryResult (= ~'e ?root#) (= ~'query '~subquery-name) (= ~'result ~val-var)]]
        [:not
         [:and
          [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
@@ -56,7 +56,7 @@
           {}
           (:children query)))
 
-(defn remove-nil-values [data]
+(defn remove-nil-values [result]
   (clojure.walk/postwalk
    (fn [x]
      (cond->> x
@@ -65,7 +65,7 @@
         (fn [m k v]
           (cond-> m v (assoc k v)))
         {})))
-   data))
+   result))
 
 (s/def ::variable (s/and simple-symbol? #(= \? (get (name %) 0))))
 
@@ -120,9 +120,9 @@
 
   Results are insert in QueryResult facts with the following fields:
 
-    query - A fully-qualified symbol naming the query (e.g. sample-ns/sample-rule)
-    root  - The root from which the data was pulled (the values of ?eid above)
-    data  - The resulting query data.
+    query  - A fully-qualified symbol naming the query (e.g. sample-ns/sample-rule)
+    root   - The root from which the result was pulled (the values of ?eid above)
+    result - The resulting query data.
   "
   [rule-name & body]
   (let [{:keys [query from where doc properties]}

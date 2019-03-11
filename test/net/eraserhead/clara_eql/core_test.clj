@@ -13,7 +13,7 @@
 
 (r/defquery query-results
   []
-  [QueryResult (= e ?root) (= query ?query) (= data ?data)])
+  [QueryResult (= e ?root) (= query ?query) (= result ?result)])
 
 (defrule basic-rule
   "Some basic rule"
@@ -73,37 +73,37 @@
     (facts "about top-level keys"
       (facts "about single-cardinality keys"
         (fact "returns a result when all values are present"
-          results => (contains {:?query `basic-rule
-                                :?root  10
-                                :?data  {:foo/uuid "aaa"}}))
+          results => (contains {:?query  `basic-rule
+                                :?root   10
+                                :?result {:foo/uuid "aaa"}}))
         (fact "returns a result when root is missing a key"
-          results => (contains {:?query `missing-property-rule
-                                :?root  10
-                                :?data  {:foo/uuid "aaa"}})))
+          results => (contains {:?query  `missing-property-rule
+                                :?root   10
+                                :?result {:foo/uuid "aaa"}})))
       (facts "about cardinality-many keys"
         (fact "returns all values for a cardinality-many key"
-          results => (contains {:?query `many-valued-key
-                                :?root  10
-                                :?data  {:foo/uuid        "aaa"
-                                         :foo/many-valued [11 12]}}))
+          results => (contains {:?query  `many-valued-key
+                                :?root   10
+                                :?result {:foo/uuid        "aaa"
+                                          :foo/many-valued [11 12]}}))
         (fact "returns an empty set for a cardinality-many key if no values are present"
-          results => (contains {:?query `many-valued-key
-                                :?root  20
-                                :?data  {:foo/uuid        "bbb"
-                                         :foo/many-valued []}}))))
+          results => (contains {:?query  `many-valued-key
+                                :?root   20
+                                :?result {:foo/uuid        "bbb"
+                                          :foo/many-valued []}}))))
     (facts "about joins"
       (fact "returns joined values"
-        results => (contains {:?query `basic-join-rule
+        results => (contains {:?query  `basic-join-rule
                               :?root   30
-                              :?data   {:foo/bar {:bar/uuid "ccc"}}}))
+                              :?result {:foo/bar {:bar/uuid "ccc"}}}))
       (fact "returns nested join values"
-        results => (contains {:?query `nested-join-rule
-                              :?root 50
-                              :?data {:a/b {:b/c {:c/d "world"}}}}))
+        results => (contains {:?query  `nested-join-rule
+                              :?root   50
+                              :?result {:a/b {:b/c {:c/d "world"}}}}))
       (future-fact "returns collections for many-valued nested join values"
-        results => (contains {:?query `many-valued-join
-                              :?root 50
-                              :?data {:foo/many-valued [{:bar/name "b11"}
-                                                        {:bar/name "b12"}]}})))
+        results => (contains {:?query  `many-valued-join
+                              :?root   50
+                              :?result {:foo/many-valued [{:bar/name "b11"}
+                                                          {:bar/name "b12"}]}})))
     (facts "about unions"
       (future-fact "returns values from all branches of the union"))))
