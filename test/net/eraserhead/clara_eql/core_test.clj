@@ -13,7 +13,7 @@
 
 (r/defquery query-results
   []
-  [QueryData (= e ?root) (= a nil) (= query ?query) (= data ?data)])
+  [QueryData (= e ?root) (= query ?query) (= data ?data)])
 
 (defrule basic-rule
   "Some basic rule"
@@ -94,15 +94,16 @@
     (facts "about joins"
       (fact "returns joined values"
         results => (contains {:?query `basic-join-rule
-                              :?root  30
-                              :?data  {:foo/bar {:bar/uuid "ccc"}}}))
+                              :?root   30
+                              :?data   {:foo/bar {:bar/uuid "ccc"}}}))
       (fact "returns nested join values"
         results => (contains {:?query `nested-join-rule
-                              :?root  50
-                              :?data  {:a/b {:b/c {:c/d "world"}}}}))
+                              :?root 50
+                              :?data {:a/b {:b/c {:c/d "world"}}}}))
       (future-fact "returns collections for many-valued nested join values"
         results => (contains {:?query `many-valued-join
-                              :?root  50
-                              :?data  {:foo/many-valued [{:bar/name "b11"} {:bar/name "b12"}]}})))
+                              :?root 50
+                              :?data {:foo/many-valued [{:bar/name "b11"}
+                                                        {:bar/name "b12"}]}})))
     (facts "about unions"
       (future-fact "returns values from all branches of the union"))))

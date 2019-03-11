@@ -9,7 +9,7 @@
   (:import
    (clara_eav.eav EAV)))
 
-(defrecord QueryData [query e a data])
+(defrecord QueryData [query e data])
 
 (defn- key->variable [kw]
   (symbol (str \? (namespace kw) \_ (name kw))))
@@ -38,11 +38,11 @@
     `([:or
        [:and
         [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
-        [QueryData (= ~'e ?root#) (= ~'a nil) (= ~'query '~subquery-name) (= ~'data ~val-var)]]
+        [QueryData (= ~'e ?root#) (= ~'query '~subquery-name) (= ~'data ~val-var)]]
        [:not
         [:and
          [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
-         [QueryData (= ~'e ?root#) (= ~'a nil) (= ~'query '~subquery-name)]]]])))
+         [QueryData (= ~'e ?root#) (= ~'query '~subquery-name)]]]])))
 
 (defn- query-productions [qualified-name eid-var query]
   (case (:type query)
@@ -101,7 +101,7 @@
          ~@where
          ~@productions
          ~'=>
-         (r/insert! (->QueryData '~qualified-name ~from nil (remove-nil-values ~(query-structure query)))))])))
+         (r/insert! (->QueryData '~qualified-name ~from (remove-nil-values ~(query-structure query)))))])))
 
 (s/fdef defrule
   :args ::defrule-args)
