@@ -54,6 +54,14 @@
   :where
   [EAV (= e ?eid) (= a :foo/uuid) (= v "aaa")])
 
+(defn- sort-multi-values [result]
+  (clojure.walk/postwalk
+   (fn [x]
+     (if (and (vector? x) (not (map-entry? x)))
+       (->> x (map pr-str) sort (map read-string) vec)
+       x))
+   result))
+
 (facts "about defrule"
   (let [session (-> (r/mk-session 'net.eraserhead.clara-eql.core
                                   'net.eraserhead.clara-eql.core-test)
@@ -70,7 +78,8 @@
                               (eav/->EAV 60 :b/c 70)
                               (eav/->EAV 70 :c/d "world"))
                     (r/fire-rules))
-        results (r/query session query-results)]
+        results (->> (r/query session query-results)
+                     (map #(update % :?result sort-multi-values)))]
     (facts "about top-level keys"
       (facts "about single-cardinality keys"
         (fact "returns a result when all values are present"
