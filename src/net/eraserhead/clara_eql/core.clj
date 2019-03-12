@@ -58,33 +58,30 @@
 
 (defn- attribute-rule
   [qualified-name from where child-query]
-  `(r/defrule ~(symbol (str (name (subquery-name qualified-name child-query)) "__attribute"))
-     ~@where
-     [:or
-      [:and
-       [:not [EAV (= ~'e ~(:key child-query)) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
-       [SingleAttributeQueryResult
-        (= ~'query '~(subquery-name qualified-name child-query))
-        (= ~'e ~from)
-        (= ~'a ~(:key child-query))
-        (= ~'result ?result#)]]
-      [:and
-       [:not [EAV (= ~'e ~(:key child-query)) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
-       [:not [SingleAttributeQueryResult
-              (= ~'query '~(subquery-name qualified-name child-query))
-              (= ~'e ~from)
-              (= ~'a ~(:key child-query))]]]
-      [:and
-       [EAV (= ~'e ~(:key child-query)) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]
-       [?result# ~'<- (acc/all :result) :from [SingleAttributeQueryResult
-                                               (= ~'query '~(subquery-name qualified-name child-query))
-                                               (= ~'e ~from)
-                                               (= ~'a ~(:key child-query))]]]]
-     ~'=>
-     (r/insert! (->AttributeQueryResult '~(subquery-name qualified-name child-query)
-                                        ~from
-                                        ~(:key child-query)
-                                        ?result#))))
+  (let [subrule-name        (subquery-name qualified-name child-query)
+        attribute-rule-name (symbol (str (name subrule-name) "__attribute"))
+        attribute           (:key child-query)]
+    `(r/defrule ~attribute-rule-name
+       ~@where
+       [:or
+        [:and
+         [:not [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
+         [SingleAttributeQueryResult
+          (= ~'query '~subrule-name)
+          (= ~'e ~from)
+          (= ~'a ~attribute)
+          (= ~'result ?result#)]]
+        [:and
+         [:not [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
+         [:not [SingleAttributeQueryResult (= ~'query '~subrule-name) (= ~'e ~from) (= ~'a ~attribute)]]]
+        [:and
+         [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]
+         [?result# ~'<- (acc/all :result) :from [SingleAttributeQueryResult
+                                                 (= ~'query '~subrule-name)
+                                                 (= ~'e ~from)
+                                                 (= ~'a ~attribute)]]]]
+       ~'=>
+       (r/insert! (->AttributeQueryResult '~subrule-name ~from ~attribute ?result#)))))
 
 (defn- rule-code
   [qualified-name query from where doc properties]
