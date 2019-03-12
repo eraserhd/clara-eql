@@ -10,6 +10,14 @@
    (clara_eav.eav EAV)))
 
 (defrecord QueryResult [query e result])
+(defrecord SingleAttributeQueryResult [query e a result])
+(defrecord AttributeQueryResult [query e a result])
+
+(r/defrule foo
+  [EAV (= e ?e) (= a ?a) (= v ?v)]
+  [QueryResult (= query ?query) (= e ?v) (= result ?result)]
+  =>
+  (r/insert! (->SingleAttributeQueryResult ?query ?e ?a ?result)))
 
 (defn- key->variable [kw]
   (symbol (str \? (namespace kw) \_ (name kw))))
@@ -82,24 +90,64 @@
 
 (defn- rule-code
   [qualified-name query from where doc properties]
-  (let [productions (mapcat (partial query-productions qualified-name from) (:children query))]
+  (case (:type query)
+    :prop
+    [`(r/defrule ~(symbol (name qualified-name))
+        ~@where
+        ~'=>
+        (r/insert! (->QueryResult '~qualified-name ~from ~from)))]
+    (:root :join)
     (concat
      (mapcat (fn [child-query]
-               (when (= :join (:type child-query))
-                 (rule-code (subquery-name qualified-name child-query)
-                            child-query
-                            (key->variable (:key child-query))
-                            (concat
-                             where
-                             [`[EAV (= ~'e ~from) (= ~'a ~(:key child-query)) (= ~'v ~(key->variable (:key child-query)))]])
-                            doc
-                            properties)))
+               (rule-code (subquery-name qualified-name child-query)
+                          child-query
+                          (key->variable (:key child-query))
+                          (concat
+                           where
+                           [`[EAV (= ~'e ~from) (= ~'a ~(:key child-query)) (= ~'v ~(key->variable (:key child-query)))]])
+                          doc
+                          properties))
              (:children query))
+     (map (fn [child-query]
+            `(r/defrule ~(symbol (str (name (subquery-name qualified-name child-query)) "__attribute"))
+               ~@where
+               [:or
+                [:and
+                 [:not [EAV (= ~'e ~(:key child-query)) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
+                 [SingleAttributeQueryResult
+                  (= ~'query '~(subquery-name qualified-name child-query))
+                  (= ~'e ~from)
+                  (= ~'a ~(:key child-query))
+                  (= ~'result ?result#)]]
+                [:and
+                 [:not [EAV (= ~'e ~(:key child-query)) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
+                 [:not [SingleAttributeQueryResult
+                        (= ~'query '~(subquery-name qualified-name child-query))
+                        (= ~'e ~from)
+                        (= ~'a ~(:key child-query))]]]
+                [:and
+                 [EAV (= ~'e ~(:key child-query)) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]
+                 [?result# ~'<- (acc/all :result) :from [SingleAttributeQueryResult
+                                                         (= ~'query '~(subquery-name qualified-name child-query))
+                                                         (= ~'e ~from)
+                                                         (= ~'a ~(:key child-query))]]]]
+               ~'=>
+               (r/insert! (->AttributeQueryResult '~(subquery-name qualified-name child-query)
+                                                  ~from
+                                                  ~(:key child-query)
+                                                  ?result#))))
+          (:children query))
      [`(r/defrule ~(symbol (name qualified-name))
          ~doc
          ~properties
          ~@where
-         ~@productions
+         ~@(map (fn [child-query]
+                  `[AttributeQueryResult
+                    (= ~'query '~(subquery-name qualified-name child-query))
+                    (= ~'e ~from)
+                    (= ~'a ~(:key child-query))
+                    (= ~'result ~(key->variable (:key child-query)))])
+                (:children query))
          ~'=>
          (r/insert! (->QueryResult '~qualified-name ~from (remove-nil-values ~(query-structure query)))))])))
 

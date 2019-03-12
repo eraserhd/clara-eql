@@ -55,7 +55,8 @@
   [EAV (= e ?eid) (= a :foo/uuid) (= v "aaa")])
 
 (facts "about defrule"
-  (let [session (-> (r/mk-session)
+  (let [session (-> (r/mk-session 'net.eraserhead.clara-eql.core
+                                  'net.eraserhead.clara-eql.core-test)
                     (r/insert (eav/->EAV :foo/many-valued :db/cardinality :db.cardinality/many)
                               (eav/->EAV 10 :foo/uuid "aaa")
                               (eav/->EAV 10 :foo/many-valued 11)
