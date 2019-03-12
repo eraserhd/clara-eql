@@ -54,6 +54,14 @@
   :where
   [EAV (= e ?eid) (= a :foo/uuid) (= v "aaa")])
 
+(defrule union
+  :query [{:foo/many-valued
+           {:baz/id [:bar/name :baz/x]
+            :quux/id [:bar/name :quux/x]}}]
+  :from ?eid
+  :where
+  [EAV (= e ?eid) (= a :foo/uuid) (= v "aaa")])
+
 (defn- sort-multi-values [result]
   (clojure.walk/postwalk
    (fn [x]
@@ -69,7 +77,11 @@
                               (eav/->EAV 10 :foo/uuid "aaa")
                               (eav/->EAV 10 :foo/many-valued 11)
                               (eav/->EAV 11 :bar/name "b11")
+                              (eav/->EAV 11 :baz/id 42)
+                              (eav/->EAV 11 :baz/x -42)
                               (eav/->EAV 12 :bar/name "b12")
+                              (eav/->EAV 12 :quux/id 76)
+                              (eav/->EAV 12 :quux/x -78)
                               (eav/->EAV 10 :foo/many-valued 12)
                               (eav/->EAV 20 :foo/uuid "bbb")
                               (eav/->EAV 30 :foo/bar 40)

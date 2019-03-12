@@ -28,7 +28,10 @@
 
 (defn- query-structure [query]
   (reduce (fn [m child-query]
-            (assoc m (:key child-query) (key->variable (:key child-query))))
+            (case (:type child-query)
+              (:prop :join)
+              (assoc m (:key child-query) (key->variable (:key child-query)))
+              nil))
           {}
           (:children query)))
 
@@ -58,30 +61,34 @@
 
 (defn- attribute-rule
   [qualified-name from where child-query]
-  (let [subrule-name        (subquery-name qualified-name child-query)
-        attribute-rule-name (symbol (str (name subrule-name) "__attribute"))
-        attribute           (:key child-query)]
-    `(r/defrule ~attribute-rule-name
-       ~@where
-       [:or
-        [:and
-         [:not [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
-         [SingleAttributeQueryResult
-          (= ~'query '~subrule-name)
-          (= ~'e ~from)
-          (= ~'a ~attribute)
-          (= ~'result ?result#)]]
-        [:and
-         [:not [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
-         [:not [SingleAttributeQueryResult (= ~'query '~subrule-name) (= ~'e ~from) (= ~'a ~attribute)]]]
-        [:and
-         [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]
-         [?result# ~'<- (acc/all :result) :from [SingleAttributeQueryResult
-                                                 (= ~'query '~subrule-name)
-                                                 (= ~'e ~from)
-                                                 (= ~'a ~attribute)]]]]
-       ~'=>
-       (r/insert! (->AttributeQueryResult '~subrule-name ~from ~attribute ?result#)))))
+  (case (:type child-query)
+    :union
+    nil
+    (:prop :join)
+    (let [subrule-name        (subquery-name qualified-name child-query)
+          attribute-rule-name (symbol (str (name subrule-name) "__attribute"))
+          attribute           (:key child-query)]
+      `(r/defrule ~attribute-rule-name
+         ~@where
+         [:or
+          [:and
+           [:not [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
+           [SingleAttributeQueryResult
+            (= ~'query '~subrule-name)
+            (= ~'e ~from)
+            (= ~'a ~attribute)
+            (= ~'result ?result#)]]
+          [:and
+           [:not [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
+           [:not [SingleAttributeQueryResult (= ~'query '~subrule-name) (= ~'e ~from) (= ~'a ~attribute)]]]
+          [:and
+           [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]
+           [?result# ~'<- (acc/all :result) :from [SingleAttributeQueryResult
+                                                   (= ~'query '~subrule-name)
+                                                   (= ~'e ~from)
+                                                   (= ~'a ~attribute)]]]]
+         ~'=>
+         (r/insert! (->AttributeQueryResult '~subrule-name ~from ~attribute ?result#))))))
 
 (defn- rule-code
   [qualified-name query from where doc properties]
@@ -91,30 +98,36 @@
         ~@where
         ~'=>
         (r/insert! (->QueryResult '~qualified-name ~from ~from)))]
+    :union
+    nil
+    :union-entry
+    nil
     (:root :join)
     (concat
      (mapcat (fn [child-query]
-               (rule-code (subquery-name qualified-name child-query)
-                          child-query
-                          (key->variable (:key child-query))
-                          (concat
-                           where
-                           [`[EAV (= ~'e ~from) (= ~'a ~(:key child-query)) (= ~'v ~(key->variable (:key child-query)))]])
-                          doc
-                          properties))
+               (when (#{:prop :join} (:type child-query))
+                 (rule-code (subquery-name qualified-name child-query)
+                            child-query
+                            (key->variable (:key child-query))
+                            (concat
+                             where
+                             [`[EAV (= ~'e ~from) (= ~'a ~(:key child-query)) (= ~'v ~(key->variable (:key child-query)))]])
+                            doc
+                            properties)))
              (:children query))
      (map (partial attribute-rule qualified-name from where) (:children query))
      [`(r/defrule ~(symbol (name qualified-name))
          ~doc
          ~properties
          ~@where
-         ~@(map (fn [child-query]
-                  `[AttributeQueryResult
-                    (= ~'query '~(subquery-name qualified-name child-query))
-                    (= ~'e ~from)
-                    (= ~'a ~(:key child-query))
-                    (= ~'result ~(key->variable (:key child-query)))])
-                (:children query))
+         ~@(->> (:children query)
+                (filter (comp #{:prop :join} :type))
+                (map (fn [child-query]
+                       `[AttributeQueryResult
+                         (= ~'query '~(subquery-name qualified-name child-query))
+                         (= ~'e ~from)
+                         (= ~'a ~(:key child-query))
+                         (= ~'result ~(key->variable (:key child-query)))])))
          ~'=>
          (r/insert! (->QueryResult '~qualified-name ~from (remove-nil-values ~(query-structure query)))))])))
 
