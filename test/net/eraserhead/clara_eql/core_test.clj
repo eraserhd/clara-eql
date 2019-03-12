@@ -110,9 +110,9 @@
         results => (contains {:?query  `nested-join-rule
                               :?root   50
                               :?result {:a/b {:b/c {:c/d "world"}}}}))
-      (future-fact "returns collections for many-valued nested join values"
+      (fact "returns collections for many-valued nested join values"
         results => (contains {:?query  `many-valued-join
-                              :?root   50
+                              :?root   10
                               :?result {:foo/many-valued [{:bar/name "b11"}
                                                           {:bar/name "b12"}]}})))
     (facts "about unions"
