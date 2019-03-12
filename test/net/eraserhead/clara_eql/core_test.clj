@@ -116,4 +116,6 @@
                               :?result {:foo/many-valued [{:bar/name "b11"}
                                                           {:bar/name "b12"}]}})))
     (facts "about unions"
-      (future-fact "returns values from all branches of the union"))))
+      (future-fact "returns values from all branches of the union"))
+    (facts "about idents"
+      (future-fact "returns values from the specified object"))))
