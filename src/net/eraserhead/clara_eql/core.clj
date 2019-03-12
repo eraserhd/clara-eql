@@ -13,7 +13,7 @@
 (defrecord SingleAttributeQueryResult [query e a result])
 (defrecord AttributeQueryResult [query e a result])
 
-(r/defrule foo
+(r/defrule single-attribute-query-results
   [EAV (= e ?e) (= a ?a) (= v ?v)]
   [QueryResult (= query ?query) (= e ?v) (= result ?result)]
   =>
@@ -25,38 +25,6 @@
 (defn- subquery-name [qualified-name query]
   (symbol (namespace qualified-name)
           (str (name qualified-name) (name (key->variable (:key query))))))
-
-(defn- prop-node-productions [eid-var query]
-  (let [attr-var (:key query)
-        val-var  (key->variable (:key query))]
-    `([:or
-       [:and
-        [EAV (= ~'e ~attr-var) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]
-        [~val-var ~'<- (acc/all :v) :from [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]
-       [:and
-        [:not [EAV (= ~'e ~attr-var) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
-        [:or
-         [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ~val-var)]
-         [:not [EAV (= ~'e ~eid-var) (= ~'a ~attr-var)]]]]])))
-
-(defn- join-node-productions [qualified-name eid-var query]
-  (let [attr-var (:key query)
-        val-var (key->variable (:key query))
-        subquery-name (subquery-name qualified-name query)]
-    `([:or
-       [:and
-        [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
-        [QueryResult (= ~'e ?root#) (= ~'query '~subquery-name) (= ~'result ~val-var)]]
-       [:not
-        [:and
-         [EAV (= ~'e ~eid-var) (= ~'a ~attr-var) (= ~'v ?root#)]
-         [QueryResult (= ~'e ?root#) (= ~'query '~subquery-name)]]]])))
-
-(defn- query-productions [qualified-name eid-var query]
-  (case (:type query)
-    :root (mapcat (partial query-productions eid-var) (:children query))
-    :prop (prop-node-productions eid-var query)
-    :join (join-node-productions qualified-name eid-var query)))
 
 (defn- query-structure [query]
   (reduce (fn [m child-query]
@@ -88,6 +56,36 @@
          :where-kw   #{:where}
          :where      (s/+ any?)))
 
+(defn- attribute-rule
+  [qualified-name from where child-query]
+  `(r/defrule ~(symbol (str (name (subquery-name qualified-name child-query)) "__attribute"))
+     ~@where
+     [:or
+      [:and
+       [:not [EAV (= ~'e ~(:key child-query)) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
+       [SingleAttributeQueryResult
+        (= ~'query '~(subquery-name qualified-name child-query))
+        (= ~'e ~from)
+        (= ~'a ~(:key child-query))
+        (= ~'result ?result#)]]
+      [:and
+       [:not [EAV (= ~'e ~(:key child-query)) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
+       [:not [SingleAttributeQueryResult
+              (= ~'query '~(subquery-name qualified-name child-query))
+              (= ~'e ~from)
+              (= ~'a ~(:key child-query))]]]
+      [:and
+       [EAV (= ~'e ~(:key child-query)) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]
+       [?result# ~'<- (acc/all :result) :from [SingleAttributeQueryResult
+                                               (= ~'query '~(subquery-name qualified-name child-query))
+                                               (= ~'e ~from)
+                                               (= ~'a ~(:key child-query))]]]]
+     ~'=>
+     (r/insert! (->AttributeQueryResult '~(subquery-name qualified-name child-query)
+                                        ~from
+                                        ~(:key child-query)
+                                        ?result#))))
+
 (defn- rule-code
   [qualified-name query from where doc properties]
   (case (:type query)
@@ -108,35 +106,7 @@
                           doc
                           properties))
              (:children query))
-     (map (fn [child-query]
-            `(r/defrule ~(symbol (str (name (subquery-name qualified-name child-query)) "__attribute"))
-               ~@where
-               [:or
-                [:and
-                 [:not [EAV (= ~'e ~(:key child-query)) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
-                 [SingleAttributeQueryResult
-                  (= ~'query '~(subquery-name qualified-name child-query))
-                  (= ~'e ~from)
-                  (= ~'a ~(:key child-query))
-                  (= ~'result ?result#)]]
-                [:and
-                 [:not [EAV (= ~'e ~(:key child-query)) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
-                 [:not [SingleAttributeQueryResult
-                        (= ~'query '~(subquery-name qualified-name child-query))
-                        (= ~'e ~from)
-                        (= ~'a ~(:key child-query))]]]
-                [:and
-                 [EAV (= ~'e ~(:key child-query)) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]
-                 [?result# ~'<- (acc/all :result) :from [SingleAttributeQueryResult
-                                                         (= ~'query '~(subquery-name qualified-name child-query))
-                                                         (= ~'e ~from)
-                                                         (= ~'a ~(:key child-query))]]]]
-               ~'=>
-               (r/insert! (->AttributeQueryResult '~(subquery-name qualified-name child-query)
-                                                  ~from
-                                                  ~(:key child-query)
-                                                  ?result#))))
-          (:children query))
+     (map (partial attribute-rule qualified-name from where) (:children query))
      [`(r/defrule ~(symbol (name qualified-name))
          ~doc
          ~properties
