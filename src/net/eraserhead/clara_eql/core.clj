@@ -105,7 +105,7 @@
       (r/insert! (->QueryResult '~qualified-name ~from ~from)))])
 
 (defn- rule-code
-  [qualified-name query from where doc properties]
+  [qualified-name query from where]
   (case (:type query)
     :prop
     (prop-node-rule qualified-name from where)
@@ -121,12 +121,12 @@
                        attr            (:key child-query)
                        from'           (key->variable attr)
                        where'          (concat where [`[EAV (= ~'e ~from) (= ~'a ~attr) (= ~'v ~from')]])]
-                   (rule-code qualified-name' child-query from' where' doc properties))))
+                   (rule-code qualified-name' child-query from' where'))))
              (:children query))
      (map (partial attribute-rule qualified-name from where) (:children query))
      [`(r/defrule ~(symbol (name qualified-name))
-         ~doc
-         ~properties
+         ~@(when-let [doc (::doc query)] [doc])
+         ~@(when-let [properties (::properties query)] [properties])
          ~@where
          ~@(->> (:children query)
                 (filter (comp #{:prop :join} :type))
@@ -158,8 +158,8 @@
   [rule-name & body]
   (let [{:keys [query from where doc properties]}
         (s/conform ::defrule-args (cons rule-name body))
-        query          (eql/query->ast (s/unform ::eql/query query))
         qualified-name (symbol (name (ns-name *ns*)) (name rule-name))
-        doc            (or doc "")
-        properties     (or properties {})]
-    `(do ~@(rule-code qualified-name query from where doc properties))))
+        query          (-> (eql/query->ast (s/unform ::eql/query query))
+                           (cond-> doc (assoc ::doc doc))
+                           (cond-> properties (assoc ::properties properties)))]
+    `(do ~@(rule-code qualified-name query from where))))
