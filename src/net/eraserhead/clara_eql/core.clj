@@ -95,14 +95,6 @@
   (let [{:keys [::rule-name :key ::variable]} child-query]
     `[AttributeQueryResult (= ~'query '~rule-name) (= ~'e ~from) (= ~'a ~key) (= ~'result ~variable)]))
 
-(defn- prop-node-rule
-  [query]
-  (let [{:keys [::rule-name ::variable ::where]} query]
-    [`(r/defrule ~(symbol (name rule-name))
-        ~@where
-        ~'=>
-        (r/insert! (->QueryResult '~rule-name ~variable ~variable)))]))
-
 (defn- rule-code
   [query]
   (case (:type query)
@@ -174,11 +166,18 @@
                  (assoc node ::where where)))
              root))
 
+(defn- prop-rule [query]
+  (let [{:keys [::rule-name ::variable ::where]} query]
+    [`(r/defrule ~(symbol (name rule-name))
+        ~@where
+        ~'=>
+        (r/insert! (->QueryResult '~rule-name ~variable ~variable)))]))
+
 (defn- prop-rules [root]
   (into []
         (comp
           (filter (comp #{:prop} :type))
-          (map prop-node-rule))
+          (map prop-rule))
         (tree-seq :children :children root)))
 
 (s/fdef defrule
