@@ -35,3 +35,7 @@
       (zp/zprint rule {:width 110
                        :fn-map {"defrule" :arg1-force-nl}})
       (println))))
+
+(defn expand-tmp
+  [rule-code]
+  (spit "/tmp/foo.clj" (with-out-str (expand rule-code))))
