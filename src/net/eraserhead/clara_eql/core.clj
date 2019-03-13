@@ -105,7 +105,7 @@
       (r/insert! (->QueryResult '~qualified-name ~from ~from)))])
 
 (defn- rule-code
-  [qualified-name query from where]
+  [qualified-name query where]
   (case (:type query)
     :prop
     (prop-node-rule qualified-name (::variable query) where)
@@ -120,7 +120,7 @@
                  (let [qualified-name' (subquery-name qualified-name child-query)
                        attr            (:key child-query)
                        where'          (concat where [`[EAV (= ~'e ~(::variable query)) (= ~'a ~attr) (= ~'v ~(::variable child-query))]])]
-                   (rule-code qualified-name' child-query (::variable child-query) where'))))
+                   (rule-code qualified-name' child-query where'))))
              (:children query))
      (map (partial attribute-rule qualified-name (::variable query) where) (:children query))
      [`(r/defrule ~(symbol (name qualified-name))
@@ -169,4 +169,4 @@
                                           :root         (assoc node ::variable from)
                                           (:prop :join) (assoc node ::variable (key->variable (:key node)))
                                           node))))]
-    `(do ~@(rule-code qualified-name query from where))))
+    `(do ~@(rule-code qualified-name query where))))
