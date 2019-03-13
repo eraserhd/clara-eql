@@ -8,6 +8,7 @@
                  [com.cerner/clara-rules "0.19.0"]
                  [edn-query-language/eql "0.0.3"]]
   :profiles {:dev
-             {:dependencies [[midje "1.9.6"]]
+             {:dependencies [[midje "1.9.6"]
+                             [zprint "0.4.15"]]
               :plugins      [[lein-midje "3.2.1"]]}}
   :repl-options {:init-ns dev})
