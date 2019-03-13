@@ -98,8 +98,8 @@
     `[AttributeQueryResult (= ~'query '~query) (= ~'e ~from) (= ~'a ~attr) (= ~'result ~result)]))
 
 (defn- prop-node-rule
-  [query where]
-  (let [{:keys [::rule-name ::variable]} query]
+  [query]
+  (let [{:keys [::rule-name ::variable ::where]} query]
     [`(r/defrule ~(symbol (name rule-name))
         ~@where
         ~'=>
@@ -109,7 +109,7 @@
   [query where]
   (case (:type query)
     :prop
-    (prop-node-rule query where)
+    (prop-node-rule query)
     :union
     nil
     :union-entry
@@ -118,8 +118,8 @@
     (concat
      (mapcat (fn [child-query]
                (when (#{:prop :join} (:type child-query))
-                 (let [attr            (:key child-query)
-                       where'          (concat where [`[EAV (= ~'e ~(::variable query)) (= ~'a ~attr) (= ~'v ~(::variable child-query))]])]
+                 (let [attr   (:key child-query)
+                       where' (concat where [`[EAV (= ~'e ~(::variable query)) (= ~'a ~attr) (= ~'v ~(::variable child-query))]])]
                    (rule-code child-query where'))))
              (:children query))
      (map (partial attribute-rule query where) (:children query))
@@ -154,6 +154,29 @@
                                   #_otherwise   (add-rule-names child rule-name)))
                               children)))))
 
+(defn- add-paths [root path]
+  (-> root
+    (assoc ::path path)
+    (update :children (fn [children]
+                        (mapv (fn [child]
+                                (case (:type child)
+                                  (:prop :join) (add-paths child (conj path (:key child)))
+                                  #_otherwise   (add-paths child path)))
+                              children)))))
+
+(defn- add-wheres [root where from]
+  (map-nodes (fn [{:keys [::path] :as node}]
+               (let [where (first (reduce (fn [[where from] kw]
+                                            (let [vname (key->variable kw)]
+                                              [(concat
+                                                where
+                                                `([EAV (= ~'e ~from) (= ~'a ~kw) (= ~'v ~vname)]))
+                                               vname]))
+                                          [where from]
+                                          path))]
+                 (assoc node ::where where)))
+             root))
+
 (s/fdef defrule
   :args ::defrule-args)
 
@@ -183,5 +206,7 @@
                            (cond-> doc (assoc ::doc doc))
                            (cond-> properties (assoc ::properties properties))
                            (add-variables from)
-                           (add-rule-names qualified-name))]
+                           (add-rule-names qualified-name)
+                           (add-paths [])
+                           (add-wheres where from))]
     `(do ~@(rule-code query where))))
