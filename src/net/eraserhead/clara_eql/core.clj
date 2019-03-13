@@ -108,7 +108,7 @@
   [qualified-name query from where]
   (case (:type query)
     :prop
-    (prop-node-rule qualified-name from where)
+    (prop-node-rule qualified-name (::variable query) where)
     :union
     nil
     :union-entry
@@ -119,20 +119,22 @@
                (when (#{:prop :join} (:type child-query))
                  (let [qualified-name' (subquery-name qualified-name child-query)
                        attr            (:key child-query)
-                       from'           (key->variable attr)
-                       where'          (concat where [`[EAV (= ~'e ~from) (= ~'a ~attr) (= ~'v ~from')]])]
-                   (rule-code qualified-name' child-query from' where'))))
+                       where'          (concat where [`[EAV (= ~'e ~(::variable query)) (= ~'a ~attr) (= ~'v ~(::variable child-query))]])]
+                   (rule-code qualified-name' child-query (::variable child-query) where'))))
              (:children query))
-     (map (partial attribute-rule qualified-name from where) (:children query))
+     (map (partial attribute-rule qualified-name (::variable query) where) (:children query))
      [`(r/defrule ~(symbol (name qualified-name))
          ~@(when-let [doc (::doc query)] [doc])
          ~@(when-let [properties (::properties query)] [properties])
          ~@where
          ~@(->> (:children query)
                 (filter (comp #{:prop :join} :type))
-                (map (partial attribute-productions qualified-name from)))
+                (map (partial attribute-productions qualified-name (::variable query))))
          ~'=>
-         (r/insert! (->QueryResult '~qualified-name ~from (remove-nil-values ~(query-structure query)))))])))
+         (r/insert! (->QueryResult '~qualified-name ~(::variable query) (remove-nil-values ~(query-structure query)))))])))
+
+(defn- map-nodes [node f]
+  (f (eql/transduce-children (map f) node)))
 
 (s/fdef defrule
   :args ::defrule-args)
@@ -161,5 +163,10 @@
         qualified-name (symbol (name (ns-name *ns*)) (name rule-name))
         query          (-> (eql/query->ast (s/unform ::eql/query query))
                            (cond-> doc (assoc ::doc doc))
-                           (cond-> properties (assoc ::properties properties)))]
+                           (cond-> properties (assoc ::properties properties))
+                           (map-nodes (fn [node]
+                                        (case (:type node)
+                                          :root         (assoc node ::variable from)
+                                          (:prop :join) (assoc node ::variable (key->variable (:key node)))
+                                          node))))]
     `(do ~@(rule-code qualified-name query from where))))
