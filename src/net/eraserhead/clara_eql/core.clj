@@ -95,32 +95,27 @@
   (let [{:keys [::rule-name :key ::variable]} child-query]
     `[AttributeQueryResult (= ~'query '~rule-name) (= ~'e ~from) (= ~'a ~key) (= ~'result ~variable)]))
 
-(defn- rule-code
+(defn- join-rule
   [query]
-  (case (:type query)
-    :prop
-    nil
-    :union
-    nil
-    :union-entry
-    nil
-    (:root :join)
-    (let [{:keys [:children ::rule-name ::doc ::properties ::variable ::where]} query]
-      (concat
-       (mapcat (fn [child-query]
-                 (when (#{:prop :join} (:type child-query))
-                   (rule-code child-query)))
-               children)
-       (map (partial attribute-rule query) children)
-       [`(r/defrule ~(symbol (name rule-name))
-           ~@(when doc [doc])
-           ~@(when properties [properties])
-           ~@where
-           ~@(->> children
-                  (filter (comp #{:prop :join} :type))
-                  (map (partial attribute-productions variable)))
-           ~'=>
-           (r/insert! (->QueryResult '~rule-name ~variable (remove-nil-values ~(query-structure query)))))]))))
+  (let [{:keys [:children ::rule-name ::doc ::properties ::variable ::where]} query]
+    (concat
+     (map (partial attribute-rule query) children)
+     [`(r/defrule ~(symbol (name rule-name))
+         ~@(when doc [doc])
+         ~@(when properties [properties])
+         ~@where
+         ~@(->> children
+                (filter (comp #{:prop :join} :type))
+                (map (partial attribute-productions variable)))
+         ~'=>
+         (r/insert! (->QueryResult '~rule-name ~variable (remove-nil-values ~(query-structure query)))))])))
+
+(defn- join-rules [root]
+  (into []
+        (comp
+          (filter (comp #{:root :join} :type))
+          (mapcat join-rule))
+        (tree-seq :children :children root)))
 
 (defn- map-nodes [f node]
   (f (eql/transduce-children (map f) node)))
@@ -214,4 +209,4 @@
                            (add-wheres where from))]
     `(do
        ~@(prop-rules query)
-       ~@(rule-code query))))
+       ~@(join-rules query))))
