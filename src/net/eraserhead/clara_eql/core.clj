@@ -107,7 +107,7 @@
   [query]
   (case (:type query)
     :prop
-    (prop-node-rule query)
+    nil
     :union
     nil
     :union-entry
@@ -174,6 +174,13 @@
                  (assoc node ::where where)))
              root))
 
+(defn- prop-rules [root]
+  (into []
+        (comp
+          (filter (comp #{:prop} :type))
+          (map prop-node-rule))
+        (tree-seq :children :children root)))
+
 (s/fdef defrule
   :args ::defrule-args)
 
@@ -206,4 +213,6 @@
                            (add-rule-names qualified-name)
                            (add-paths [])
                            (add-wheres where from))]
-    `(do ~@(rule-code query))))
+    `(do
+       ~@(prop-rules query)
+       ~@(rule-code query))))
