@@ -134,20 +134,6 @@
                  node))
              root))
 
-(defn- add-rule-names [root rule-name]
-  (-> root
-    (assoc ::rule-name rule-name)
-    (update :children (fn [children]
-                        (mapv (fn [child]
-                                (case (:type child)
-                                  (:prop :join)
-                                  (let [rule-name' (symbol
-                                                    (namespace rule-name)
-                                                    (str (name rule-name) (name (::variable child))))]
-                                    (add-rule-names child rule-name'))
-                                  (add-rule-names child rule-name)))
-                              children)))))
-
 (defn- add-paths [root path]
   (-> root
     (assoc ::path path)
@@ -157,6 +143,15 @@
                                   (:prop :join) (add-paths child (conj path (:key child)))
                                   #_otherwise   (add-paths child path)))
                               children)))))
+
+(defn- add-rule-names [root rule-name]
+  (map-nodes (fn [{:keys [::path] :as node}]
+               (assoc node ::rule-name (reduce (fn [rule-name kw]
+                                                (symbol (namespace rule-name)
+                                                        (str (name rule-name) (name (key->variable kw)))))
+                                               rule-name
+                                               path)))
+             root))
 
 (defn- add-wheres [root where from]
   (map-nodes (fn [{:keys [::path] :as node}]
@@ -210,12 +205,13 @@
   (let [{:keys [query from where doc properties]}
         (s/conform ::defrule-args (cons rule-name body))
         qualified-name (symbol (name (ns-name *ns*)) (name rule-name))
-        query          (-> (eql/query->ast (s/unform ::eql/query query))
+        query          (-> (s/unform ::eql/query query)
+                           eql/query->ast
                            (cond-> doc (assoc ::doc doc))
                            (cond-> properties (assoc ::properties properties))
                            (add-variables from)
-                           (add-rule-names qualified-name)
                            (add-paths [])
+                           (add-rule-names qualified-name)
                            (add-wheres where from))]
     `(do
        ~@(prop-rules query)
