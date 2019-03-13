@@ -91,42 +91,35 @@
                               (eav/->EAV 70 :c/d "world"))
                     (r/fire-rules))
         results (->> (r/query session query-results)
-                     (map #(update % :?result sort-multi-values)))]
+                     (map #(update % :?result sort-multi-values)))
+        result (fn [query root]
+                 (let [relevant (->> results
+                                     (filter #(= root (:?root %)))
+                                     (filter #(= query (:?query %))))]
+                   (assert (= 1 (count relevant))
+                           (str "found " (count relevant) " results: " (pr-str relevant)))
+                   (:?result (first relevant))))]
     (facts "about top-level keys"
       (facts "about single-cardinality keys"
         (fact "returns a result when all values are present"
-          results => (contains {:?query  `basic-rule
-                                :?root   10
-                                :?result {:foo/uuid "aaa"}}))
+          (result `basic-rule 10) => {:foo/uuid "aaa"})
         (fact "returns a result when root is missing a key"
-          results => (contains {:?query  `missing-property-rule
-                                :?root   10
-                                :?result {:foo/uuid "aaa"}})))
+          (result `missing-property-rule 10) => {:foo/uuid "aaa"}))
       (facts "about cardinality-many keys"
         (fact "returns all values for a cardinality-many key"
-          results => (contains {:?query  `many-valued-key
-                                :?root   10
-                                :?result {:foo/uuid        "aaa"
-                                          :foo/many-valued [11 12]}}))
+          (result `many-valued-key 10) => {:foo/uuid        "aaa"
+                                           :foo/many-valued [11 12]})
         (fact "returns an empty set for a cardinality-many key if no values are present"
-          results => (contains {:?query  `many-valued-key
-                                :?root   20
-                                :?result {:foo/uuid        "bbb"
-                                          :foo/many-valued []}}))))
+          (result `many-valued-key 20) => {:foo/uuid        "bbb"
+                                           :foo/many-valued []})))
     (facts "about joins"
       (fact "returns joined values"
-        results => (contains {:?query  `basic-join-rule
-                              :?root   30
-                              :?result {:foo/bar {:bar/uuid "ccc"}}}))
+        (result `basic-join-rule 30) => {:foo/bar {:bar/uuid "ccc"}})
       (fact "returns nested join values"
-        results => (contains {:?query  `nested-join-rule
-                              :?root   50
-                              :?result {:a/b {:b/c {:c/d "world"}}}}))
+        (result `nested-join-rule 50) => {:a/b {:b/c {:c/d "world"}}})
       (fact "returns collections for many-valued nested join values"
-        results => (contains {:?query  `many-valued-join
-                              :?root   10
-                              :?result {:foo/many-valued [{:bar/name "b11"}
-                                                          {:bar/name "b12"}]}})))
+        (result `many-valued-join 10) => {:foo/many-valued [{:bar/name "b11"}
+                                                            {:bar/name "b12"}]}))
     (facts "about unions"
       (future-fact "returns values from all branches of the union"))
     (facts "about idents"
