@@ -90,6 +90,17 @@
          ~'=>
          (r/insert! (->AttributeQueryResult '~subrule-name ~(::variable query) ~attribute ?result#))))))
 
+(defn- attribute-rules [root]
+  (into []
+        (comp
+          (filter (comp #{:root :join} :type))
+          (mapcat #(for [child (:children %)] [% child]))
+          (filter (fn [[parent child]]
+                    (#{:prop :join} (:type child))))
+          (map (fn [[parent child]]
+                 (attribute-rule parent child))))
+        (tree-seq :children :children root)))
+
 (defn- attribute-productions
   [from child-query]
   (let [{:keys [::rule-name :key ::variable]} child-query]
@@ -98,23 +109,21 @@
 (defn- join-rule
   [query]
   (let [{:keys [:children ::rule-name ::doc ::properties ::variable ::where]} query]
-    (concat
-     (map (partial attribute-rule query) children)
-     [`(r/defrule ~(symbol (name rule-name))
-         ~@(when doc [doc])
-         ~@(when properties [properties])
-         ~@where
-         ~@(->> children
-                (filter (comp #{:prop :join} :type))
-                (map (partial attribute-productions variable)))
-         ~'=>
-         (r/insert! (->QueryResult '~rule-name ~variable (remove-nil-values ~(query-structure query)))))])))
+    `(r/defrule ~(symbol (name rule-name))
+       ~@(when doc [doc])
+       ~@(when properties [properties])
+       ~@where
+       ~@(->> children
+              (filter (comp #{:prop :join} :type))
+              (map (partial attribute-productions variable)))
+       ~'=>
+       (r/insert! (->QueryResult '~rule-name ~variable (remove-nil-values ~(query-structure query)))))))
 
 (defn- join-rules [root]
   (into []
         (comp
           (filter (comp #{:root :join} :type))
-          (mapcat join-rule))
+          (map join-rule))
         (tree-seq :children :children root)))
 
 (defn- map-nodes [f node]
@@ -209,4 +218,5 @@
                            (add-wheres where from))]
     `(do
        ~@(prop-rules query)
+       ~@(attribute-rules query)
        ~@(join-rules query))))
