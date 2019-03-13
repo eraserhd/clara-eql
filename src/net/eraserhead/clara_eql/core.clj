@@ -106,7 +106,7 @@
         (r/insert! (->QueryResult '~rule-name ~variable ~variable)))]))
 
 (defn- rule-code
-  [query where]
+  [query]
   (case (:type query)
     :prop
     (prop-node-rule query)
@@ -118,15 +118,13 @@
     (concat
      (mapcat (fn [child-query]
                (when (#{:prop :join} (:type child-query))
-                 (let [attr   (:key child-query)
-                       where' (concat where [`[EAV (= ~'e ~(::variable query)) (= ~'a ~attr) (= ~'v ~(::variable child-query))]])]
-                   (rule-code child-query where'))))
+                 (rule-code child-query)))
              (:children query))
-     (map (partial attribute-rule query where) (:children query))
+     (map (partial attribute-rule query (::where query)) (:children query))
      [`(r/defrule ~(symbol (name (::rule-name query)))
          ~@(when-let [doc (::doc query)] [doc])
          ~@(when-let [properties (::properties query)] [properties])
-         ~@where
+         ~@(::where query)
          ~@(->> (:children query)
                 (filter (comp #{:prop :join} :type))
                 (map (partial attribute-productions (::variable query))))
@@ -209,4 +207,4 @@
                            (add-rule-names qualified-name)
                            (add-paths [])
                            (add-wheres where from))]
-    `(do ~@(rule-code query where))))
+    `(do ~@(rule-code query))))
