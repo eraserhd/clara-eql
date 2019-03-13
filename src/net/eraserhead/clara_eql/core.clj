@@ -90,14 +90,18 @@
          ~'=>
          (r/insert! (->AttributeQueryResult '~subrule-name ~from ~attribute ?result#))))))
 
+(defn prop-node-rule
+  [qualified-name from where]
+  [`(r/defrule ~(symbol (name qualified-name))
+        ~@where
+        ~'=>
+        (r/insert! (->QueryResult '~qualified-name ~from ~from)))])
+
 (defn- rule-code
   [qualified-name query from where doc properties]
   (case (:type query)
     :prop
-    [`(r/defrule ~(symbol (name qualified-name))
-        ~@where
-        ~'=>
-        (r/insert! (->QueryResult '~qualified-name ~from ~from)))]
+    (prop-node-rule qualified-name from where)
     :union
     nil
     :union-entry
