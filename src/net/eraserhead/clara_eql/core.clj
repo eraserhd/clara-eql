@@ -98,18 +98,18 @@
     `[AttributeQueryResult (= ~'query '~query) (= ~'e ~from) (= ~'a ~attr) (= ~'result ~result)]))
 
 (defn- prop-node-rule
-  [query qualified-name where]
-  (let [{:keys [::variable]} query]
-    [`(r/defrule ~(symbol (name qualified-name))
+  [query where]
+  (let [{:keys [::rule-name ::variable]} query]
+    [`(r/defrule ~(symbol (name rule-name))
         ~@where
         ~'=>
-        (r/insert! (->QueryResult '~qualified-name ~variable ~variable)))]))
+        (r/insert! (->QueryResult '~rule-name ~variable ~variable)))]))
 
 (defn- rule-code
   [query where]
   (case (:type query)
     :prop
-    (prop-node-rule query (::rule-name query) where)
+    (prop-node-rule query where)
     :union
     nil
     :union-entry
