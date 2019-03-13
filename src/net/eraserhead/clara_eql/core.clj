@@ -91,8 +91,8 @@
          (r/insert! (->AttributeQueryResult '~subrule-name ~from ~attribute ?result#))))))
 
 (defn- attribute-productions
-  [qualified-name from child-query]
-  (let [query (subquery-name qualified-name child-query)
+  [from child-query]
+  (let [query (::rule-name child-query)
         attr (:key child-query)
         result (key->variable attr)]
     `[AttributeQueryResult (= ~'query '~query) (= ~'e ~from) (= ~'a ~attr) (= ~'result ~result)]))
@@ -129,7 +129,7 @@
          ~@where
          ~@(->> (:children query)
                 (filter (comp #{:prop :join} :type))
-                (map (partial attribute-productions (::rule-name query) (::variable query))))
+                (map (partial attribute-productions (::variable query))))
          ~'=>
          (r/insert! (->QueryResult '~(::rule-name query) ~(::variable query) (remove-nil-values ~(query-structure query)))))])))
 
