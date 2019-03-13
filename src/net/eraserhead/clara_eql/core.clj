@@ -22,18 +22,15 @@
 (defn- key->variable [kw]
   (symbol (str \? (namespace kw) \_ (name kw))))
 
-(defn- subquery-name [qualified-name query]
-  (symbol (namespace qualified-name)
-          (str (name qualified-name) (name (key->variable (:key query))))))
-
 (defn- query-structure [query]
-  (reduce (fn [m child-query]
-            (case (:type child-query)
-              (:prop :join)
-              (assoc m (:key child-query) (key->variable (:key child-query)))
-              nil))
-          {}
-          (:children query)))
+  (transduce
+    (filter (comp #{:prop :join} :type))
+    (fn 
+      ([m] m)
+      ([m child-query]
+       (assoc m (:key child-query) (::variable child-query))))
+    {}
+    (:children query)))
 
 (defn remove-nil-values [result]
   (clojure.walk/postwalk
@@ -143,8 +140,12 @@
     (update :children (fn [children]
                         (mapv (fn [child]
                                 (case (:type child)
-                                  (:prop :join) (add-rule-names child (subquery-name rule-name child))
-                                  #_otherwise   (add-rule-names child rule-name)))
+                                  (:prop :join)
+                                  (let [rule-name' (symbol
+                                                    (namespace rule-name)
+                                                    (str (name rule-name) (name (::variable child))))]
+                                    (add-rule-names child rule-name'))
+                                  (add-rule-names child rule-name)))
                               children)))))
 
 (defn- add-paths [root path]
