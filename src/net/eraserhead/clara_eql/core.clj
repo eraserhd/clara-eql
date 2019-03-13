@@ -60,7 +60,7 @@
          :where      (s/+ any?)))
 
 (defn- attribute-rule
-  [query where child-query]
+  [query child-query]
   (case (:type child-query)
     :union
     nil
@@ -69,7 +69,7 @@
           attribute-rule-name (symbol (str (name subrule-name) "__attribute"))
           attribute           (:key child-query)]
       `(r/defrule ~attribute-rule-name
-         ~@where
+         ~@(::where query)
          [:or
           [:and
            [:not [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
@@ -120,7 +120,7 @@
                (when (#{:prop :join} (:type child-query))
                  (rule-code child-query)))
              (:children query))
-     (map (partial attribute-rule query (::where query)) (:children query))
+     (map (partial attribute-rule query) (:children query))
      [`(r/defrule ~(symbol (name (::rule-name query)))
          ~@(when-let [doc (::doc query)] [doc])
          ~@(when-let [properties (::properties query)] [properties])
