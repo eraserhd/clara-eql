@@ -133,8 +133,16 @@
          ~'=>
          (r/insert! (->QueryResult '~qualified-name ~(::variable query) (remove-nil-values ~(query-structure query)))))])))
 
-(defn- map-nodes [node f]
+(defn- map-nodes [f node]
   (f (eql/transduce-children (map f) node)))
+
+(defn- add-variables [root from]
+  (map-nodes (fn [node]
+               (case (:type node)
+                 :root         (assoc node ::variable from)
+                 (:prop :join) (assoc node ::variable (key->variable (:key node)))
+                 node))
+             root))
 
 (s/fdef defrule
   :args ::defrule-args)
@@ -164,9 +172,5 @@
         query          (-> (eql/query->ast (s/unform ::eql/query query))
                            (cond-> doc (assoc ::doc doc))
                            (cond-> properties (assoc ::properties properties))
-                           (map-nodes (fn [node]
-                                        (case (:type node)
-                                          :root         (assoc node ::variable from)
-                                          (:prop :join) (assoc node ::variable (key->variable (:key node)))
-                                          node))))]
+                           (add-variables from))]
     `(do ~@(rule-code qualified-name query where))))
