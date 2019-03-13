@@ -19,9 +19,6 @@
   =>
   (r/insert! (->SingleAttributeQueryResult ?query ?e ?a ?result)))
 
-(defn- key->variable [kw]
-  (symbol (str \? (namespace kw) \_ (name kw))))
-
 (defn- query-structure [query]
   (transduce
     (filter (comp #{:prop :join} :type))
@@ -125,6 +122,9 @@
 
 (defn- map-nodes [f node]
   (f (eql/transduce-children (map f) node)))
+
+(defn- key->variable [kw]
+  (symbol (str \? (namespace kw) \_ (name kw))))
 
 (defn- add-variables [root from]
   (map-nodes (fn [node]
