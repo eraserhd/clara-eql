@@ -106,10 +106,10 @@
         (r/insert! (->QueryResult '~qualified-name ~variable ~variable)))]))
 
 (defn- rule-code
-  [qualified-name query where]
+  [query where]
   (case (:type query)
     :prop
-    (prop-node-rule query qualified-name where)
+    (prop-node-rule query (::rule-name query) where)
     :union
     nil
     :union-entry
@@ -118,21 +118,20 @@
     (concat
      (mapcat (fn [child-query]
                (when (#{:prop :join} (:type child-query))
-                 (let [qualified-name' (subquery-name qualified-name child-query)
-                       attr            (:key child-query)
+                 (let [attr            (:key child-query)
                        where'          (concat where [`[EAV (= ~'e ~(::variable query)) (= ~'a ~attr) (= ~'v ~(::variable child-query))]])]
-                   (rule-code qualified-name' child-query where'))))
+                   (rule-code child-query where'))))
              (:children query))
-     (map (partial attribute-rule qualified-name (::variable query) where) (:children query))
-     [`(r/defrule ~(symbol (name qualified-name))
+     (map (partial attribute-rule (::rule-name query) (::variable query) where) (:children query))
+     [`(r/defrule ~(symbol (name (::rule-name query)))
          ~@(when-let [doc (::doc query)] [doc])
          ~@(when-let [properties (::properties query)] [properties])
          ~@where
          ~@(->> (:children query)
                 (filter (comp #{:prop :join} :type))
-                (map (partial attribute-productions qualified-name (::variable query))))
+                (map (partial attribute-productions (::rule-name query) (::variable query))))
          ~'=>
-         (r/insert! (->QueryResult '~qualified-name ~(::variable query) (remove-nil-values ~(query-structure query)))))])))
+         (r/insert! (->QueryResult '~(::rule-name query) ~(::variable query) (remove-nil-values ~(query-structure query)))))])))
 
 (defn- map-nodes [f node]
   (f (eql/transduce-children (map f) node)))
@@ -144,6 +143,16 @@
                  (:prop :join) (assoc node ::variable (key->variable (:key node)))
                  node))
              root))
+
+(defn- add-rule-names [root rule-name]
+  (-> root
+    (assoc ::rule-name rule-name)
+    (update :children (fn [children]
+                        (mapv (fn [child]
+                                (case (:type child)
+                                  (:prop :join) (add-rule-names child (subquery-name rule-name child))
+                                  #_otherwise   (add-rule-names child rule-name)))
+                              children)))))
 
 (s/fdef defrule
   :args ::defrule-args)
@@ -173,5 +182,6 @@
         query          (-> (eql/query->ast (s/unform ::eql/query query))
                            (cond-> doc (assoc ::doc doc))
                            (cond-> properties (assoc ::properties properties))
-                           (add-variables from))]
-    `(do ~@(rule-code qualified-name query where))))
+                           (add-variables from)
+                           (add-rule-names qualified-name))]
+    `(do ~@(rule-code query where))))
