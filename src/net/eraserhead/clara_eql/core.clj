@@ -92,10 +92,8 @@
 
 (defn- attribute-productions
   [from child-query]
-  (let [query (::rule-name child-query)
-        attr (:key child-query)
-        result (key->variable attr)]
-    `[AttributeQueryResult (= ~'query '~query) (= ~'e ~from) (= ~'a ~attr) (= ~'result ~result)]))
+  (let [{:keys [::rule-name :key ::variable]} child-query]
+    `[AttributeQueryResult (= ~'query '~rule-name) (= ~'e ~from) (= ~'a ~key) (= ~'result ~variable)]))
 
 (defn- prop-node-rule
   [query]
