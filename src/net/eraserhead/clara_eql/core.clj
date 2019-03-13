@@ -90,12 +90,19 @@
          ~'=>
          (r/insert! (->AttributeQueryResult '~subrule-name ~from ~attribute ?result#))))))
 
-(defn prop-node-rule
+(defn- attribute-productions
+  [qualified-name from child-query]
+  (let [query (subquery-name qualified-name child-query)
+        attr (:key child-query)
+        result (key->variable attr)]
+    `[AttributeQueryResult (= ~'query '~query) (= ~'e ~from) (= ~'a ~attr) (= ~'result ~result)]))
+
+(defn- prop-node-rule
   [qualified-name from where]
   [`(r/defrule ~(symbol (name qualified-name))
-        ~@where
-        ~'=>
-        (r/insert! (->QueryResult '~qualified-name ~from ~from)))])
+      ~@where
+      ~'=>
+      (r/insert! (->QueryResult '~qualified-name ~from ~from)))])
 
 (defn- rule-code
   [qualified-name query from where doc properties]
@@ -110,14 +117,11 @@
     (concat
      (mapcat (fn [child-query]
                (when (#{:prop :join} (:type child-query))
-                 (rule-code (subquery-name qualified-name child-query)
-                            child-query
-                            (key->variable (:key child-query))
-                            (concat
-                             where
-                             [`[EAV (= ~'e ~from) (= ~'a ~(:key child-query)) (= ~'v ~(key->variable (:key child-query)))]])
-                            doc
-                            properties)))
+                 (let [qualified-name' (subquery-name qualified-name child-query)
+                       attr            (:key child-query)
+                       from'           (key->variable attr)
+                       where'          (concat where [`[EAV (= ~'e ~from) (= ~'a ~attr) (= ~'v ~from')]])]
+                   (rule-code qualified-name' child-query from' where' doc properties))))
              (:children query))
      (map (partial attribute-rule qualified-name from where) (:children query))
      [`(r/defrule ~(symbol (name qualified-name))
@@ -126,12 +130,7 @@
          ~@where
          ~@(->> (:children query)
                 (filter (comp #{:prop :join} :type))
-                (map (fn [child-query]
-                       `[AttributeQueryResult
-                         (= ~'query '~(subquery-name qualified-name child-query))
-                         (= ~'e ~from)
-                         (= ~'a ~(:key child-query))
-                         (= ~'result ~(key->variable (:key child-query)))])))
+                (map (partial attribute-productions qualified-name from)))
          ~'=>
          (r/insert! (->QueryResult '~qualified-name ~from (remove-nil-values ~(query-structure query)))))])))
 
