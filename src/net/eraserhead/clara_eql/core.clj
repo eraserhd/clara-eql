@@ -60,12 +60,12 @@
          :where      (s/+ any?)))
 
 (defn- attribute-rule
-  [qualified-name from where child-query]
+  [query where child-query]
   (case (:type child-query)
     :union
     nil
     (:prop :join)
-    (let [subrule-name        (subquery-name qualified-name child-query)
+    (let [subrule-name        (::rule-name child-query)
           attribute-rule-name (symbol (str (name subrule-name) "__attribute"))
           attribute           (:key child-query)]
       `(r/defrule ~attribute-rule-name
@@ -75,20 +75,20 @@
            [:not [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
            [SingleAttributeQueryResult
             (= ~'query '~subrule-name)
-            (= ~'e ~from)
+            (= ~'e ~(::variable query))
             (= ~'a ~attribute)
             (= ~'result ?result#)]]
           [:and
            [:not [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
-           [:not [SingleAttributeQueryResult (= ~'query '~subrule-name) (= ~'e ~from) (= ~'a ~attribute)]]]
+           [:not [SingleAttributeQueryResult (= ~'query '~subrule-name) (= ~'e ~(::variable query)) (= ~'a ~attribute)]]]
           [:and
            [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]
            [?result# ~'<- (acc/all :result) :from [SingleAttributeQueryResult
                                                    (= ~'query '~subrule-name)
-                                                   (= ~'e ~from)
+                                                   (= ~'e ~(::variable query))
                                                    (= ~'a ~attribute)]]]]
          ~'=>
-         (r/insert! (->AttributeQueryResult '~subrule-name ~from ~attribute ?result#))))))
+         (r/insert! (->AttributeQueryResult '~subrule-name ~(::variable query) ~attribute ?result#))))))
 
 (defn- attribute-productions
   [from child-query]
@@ -122,7 +122,7 @@
                        where'          (concat where [`[EAV (= ~'e ~(::variable query)) (= ~'a ~attr) (= ~'v ~(::variable child-query))]])]
                    (rule-code child-query where'))))
              (:children query))
-     (map (partial attribute-rule (::rule-name query) (::variable query) where) (:children query))
+     (map (partial attribute-rule query where) (:children query))
      [`(r/defrule ~(symbol (name (::rule-name query)))
          ~@(when-let [doc (::doc query)] [doc])
          ~@(when-let [properties (::properties query)] [properties])
