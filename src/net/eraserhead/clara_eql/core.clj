@@ -81,15 +81,14 @@
        (r/insert! (->AttributeQueryResult '~subrule-name ~(::variable query) ~attribute ?result#)))))
 
 (defn- attribute-rules [root]
-  (into []
-        (comp
-          (filter (comp #{:root :join} :type))
-          (mapcat #(for [child (:children %)] [% child]))
-          (filter (fn [[parent child]]
-                    (#{:prop :join} (:type child))))
-          (map (fn [[parent child]]
-                 (attribute-rule parent child))))
-        (tree-seq :children :children root)))
+  (sequence (comp
+              (filter (comp #{:root :join} :type))
+              (mapcat #(for [child (:children %)] [% child]))
+              (filter (fn [[parent child]]
+                        (#{:prop :join} (:type child))))
+              (map (fn [[parent child]]
+                     (attribute-rule parent child))))
+            (tree-seq :children :children root)))
 
 (defn- attribute-productions
   [from child-query]
@@ -110,11 +109,10 @@
        (r/insert! (->QueryResult '~rule-name ~variable (remove-nil-values ~(query-structure query)))))))
 
 (defn- join-rules [root]
-  (into []
-        (comp
-          (filter (comp #{:root :join} :type))
-          (map join-rule))
-        (tree-seq :children :children root)))
+  (sequence (comp
+              (filter (comp #{:root :join} :type))
+              (map join-rule))
+            (tree-seq :children :children root)))
 
 (defn- map-nodes [f node]
   (f (eql/transduce-children (map f) node)))
@@ -170,11 +168,10 @@
         (r/insert! (->QueryResult '~rule-name ~variable ~variable)))]))
 
 (defn- prop-rules [root]
-  (into []
-        (comp
-          (filter (comp #{:prop} :type))
-          (map prop-rule))
-        (tree-seq :children :children root)))
+  (sequence (comp
+              (filter (comp #{:prop} :type))
+              (map prop-rule))
+            (tree-seq :children :children root)))
 
 (s/fdef defrule
   :args ::defrule-args)
