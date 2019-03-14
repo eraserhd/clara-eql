@@ -81,7 +81,7 @@
                               (eav/->EAV 11 :baz/x -42)
                               (eav/->EAV 12 :bar/name "b12")
                               (eav/->EAV 12 :quux/id 76)
-                              (eav/->EAV 12 :quux/x -78)
+                              (eav/->EAV 12 :quux/x -76)
                               (eav/->EAV 10 :foo/many-valued 12)
                               (eav/->EAV 20 :foo/uuid "bbb")
                               (eav/->EAV 30 :foo/bar 40)
@@ -121,6 +121,14 @@
         (result `many-valued-join 10) => {:foo/many-valued [{:bar/name "b11"}
                                                             {:bar/name "b12"}]}))
     (facts "about unions"
-      (future-fact "returns values from all branches of the union"))
+      (future-fact "returns values from all branches of the union"
+        (let [result (->> results
+                          (filter #(= `union (:?query %)))
+                          (filter #(= 10 (:?root %)))
+                          (map :?result))]
+          result => {:foo/many-valued [{:bar/name "b11"
+                                        :baz/x -42}
+                                       {:bar/name "b12"
+                                        :quux/x -76}]})))
     (facts "about idents"
       (future-fact "returns values from the specified object"))))
