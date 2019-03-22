@@ -61,25 +61,16 @@
     `(r/defrule ~attribute-rule-name
        ~@(when-let [properties (::properties query)] [properties])
        ~@(::where query)
-       [:or
-        [:and
-         [:not [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
-         [SingleAttributeQueryResult
-          (= ~'query '~subrule-name)
-          (= ~'e ~(::variable query))
-          (= ~'a ~attribute)
-          (= ~'result ?result#)]]
-        [:and
-         [:not [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
-         [:not [SingleAttributeQueryResult (= ~'query '~subrule-name) (= ~'e ~(::variable query)) (= ~'a ~attribute)]]]
-        [:and
-         [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]
-         [?result# ~'<- (acc/all :result) :from [SingleAttributeQueryResult
-                                                 (= ~'query '~subrule-name)
-                                                 (= ~'e ~(::variable query))
-                                                 (= ~'a ~attribute)]]]]
+       [?many# ~'<- (acc/count) :from [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
+       [?results# ~'<- (acc/all :result) :from [SingleAttributeQueryResult
+                                                (= ~'query '~subrule-name)
+                                                (= ~'e ~(::variable query))
+                                                (= ~'a ~attribute)]]
        ~'=>
-       (r/insert! (->AttributeQueryResult '~subrule-name ~(::variable query) ~attribute ?result#)))))
+       (let [value# (if (zero? ?many#)
+                      (first ?results#)
+                      ?results#)]
+         (r/insert! (->AttributeQueryResult '~subrule-name ~(::variable query) ~attribute value#))))))
 
 (defn- attribute-rules [root]
   (sequence (comp
