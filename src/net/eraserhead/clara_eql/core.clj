@@ -59,6 +59,7 @@
         attribute-rule-name (symbol (str (name subrule-name) "__attribute"))
         attribute           (:key child-query)]
     `(r/defrule ~attribute-rule-name
+       ~@(when-let [properties (::properties query)] [properties])
        ~@(::where query)
        [:or
         [:and
@@ -120,6 +121,17 @@
 (defn- key->variable [kw]
   (symbol (str \? (namespace kw) \_ (name kw))))
 
+(defn- nest-salience
+  "To avoid retriggering, we prioritize deeper nodes over inner ones, since
+  computing the deeper ones causes the inner ones to potentially recompute."
+  [root salience]
+  (-> root
+    (assoc-in [::properties :salience] salience)
+    (update :children (fn [children]
+                        (mapv (fn [child]
+                                (nest-salience child (inc salience)))
+                              children)))))
+
 (defn- add-variables [root from]
   (map-nodes (fn [node]
                (case (:type node)
@@ -161,8 +173,9 @@
              root))
 
 (defn- prop-rule [query]
-  (let [{:keys [::rule-name ::variable ::where]} query]
+  (let [{:keys [::rule-name ::variable ::properties ::where]} query]
     [`(r/defrule ~(symbol (name rule-name))
+        ~@(when properties [properties])
         ~@where
         ~'=>
         (r/insert! (->QueryResult '~rule-name ~variable ~variable)))]))
@@ -202,6 +215,7 @@
                            eql/query->ast
                            (cond-> doc (assoc ::doc doc))
                            (cond-> properties (assoc ::properties properties))
+                           (nest-salience (or (:salience properties) 0))
                            (add-variables from)
                            (add-paths [])
                            (add-rule-names qualified-name)
