@@ -85,9 +85,9 @@
        ~'=>
        (let [~'result (remove-nil-values ~(query-structure query))]
          (r/insert!
-           (->QueryResult '~rule-name ~variable ~'result)
-           ~@(when parent-variable
-               `((->SingleAttributeQueryResult '~rule-name ~parent-variable ~(:key query) ~'result))))))))
+           ~(if parent-variable
+              `(->SingleAttributeQueryResult '~rule-name ~parent-variable ~(:key query) ~'result)
+              `(->QueryResult '~rule-name ~variable ~'result)))))))
 
 (defn- join-rules [root]
   (sequence (comp
@@ -168,10 +168,7 @@
         ~@(when properties [properties])
         ~@where
         ~'=>
-        (r/insert!
-          (->QueryResult '~rule-name ~variable ~variable)
-          ~@(when parent-variable
-              `((->SingleAttributeQueryResult '~rule-name ~parent-variable ~(:key query) ~variable)))))]))
+        (r/insert! (->SingleAttributeQueryResult '~rule-name ~parent-variable ~(:key query) ~variable)))]))
 
 (defn- prop-rules [root]
   (sequence (comp
