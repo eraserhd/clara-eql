@@ -12,12 +12,6 @@
 (defrecord SingleAttributeQueryResult [query e a result])
 (defrecord AttributeQueryResult [query e a result])
 
-(r/defrule single-attribute-query-results
-  [EAV (= e ?e) (= a ?a) (= v ?v)]
-  [QueryResult (= query ?query) (= e ?v) (= result ?result)]
-  =>
-  (r/insert! (->SingleAttributeQueryResult ?query ?e ?a ?result)))
-
 (defn- query-structure [query]
   (transduce
     (filter (comp #{:prop :join} :type))
@@ -80,7 +74,7 @@
 
 (defn- join-rule
   [query]
-  (let [{:keys [:children ::rule-name ::doc ::properties ::variable ::where]} query]
+  (let [{:keys [:children ::rule-name ::doc ::properties ::parent-variable ::variable ::where]} query]
     `(r/defrule ~(symbol (name rule-name))
        ~@(when doc [doc])
        ~@(when properties [properties])
@@ -89,7 +83,11 @@
               (filter (comp #{:prop :join} :type))
               (map (partial attribute-productions variable)))
        ~'=>
-       (r/insert! (->QueryResult '~rule-name ~variable (remove-nil-values ~(query-structure query)))))))
+       (let [~'result (remove-nil-values ~(query-structure query))]
+         (r/insert!
+           (->QueryResult '~rule-name ~variable ~'result)
+           ~@(when parent-variable
+               `((->SingleAttributeQueryResult '~rule-name ~parent-variable ~(:key query) ~'result))))))))
 
 (defn- join-rules [root]
   (sequence (comp
@@ -121,6 +119,16 @@
                  (:prop :join) (assoc node ::variable (key->variable (:key node)))
                  node))
              root))
+
+(defn- add-parent-variables [root parent-variable]
+  (-> root
+    (assoc ::parent-variable parent-variable)
+    (update :children (fn [children]
+                        (mapv (fn [child]
+                                (if (::variable root)
+                                  (add-parent-variables child (::variable root))
+                                  (add-parent-variables child parent-variable)))
+                              children)))))
 
 (defn- add-paths [root path]
   (-> root
@@ -155,12 +163,15 @@
              root))
 
 (defn- prop-rule [query]
-  (let [{:keys [::rule-name ::variable ::properties ::where]} query]
+  (let [{:keys [::rule-name ::parent-variable ::variable ::properties ::where]} query]
     [`(r/defrule ~(symbol (name rule-name))
         ~@(when properties [properties])
         ~@where
         ~'=>
-        (r/insert! (->QueryResult '~rule-name ~variable ~variable)))]))
+        (r/insert!
+          (->QueryResult '~rule-name ~variable ~variable)
+          ~@(when parent-variable
+              `((->SingleAttributeQueryResult '~rule-name ~parent-variable ~(:key query) ~variable)))))]))
 
 (defn- prop-rules [root]
   (sequence (comp
@@ -199,6 +210,7 @@
                            (cond-> properties (assoc ::properties properties))
                            (nest-salience (or (:salience properties) 0))
                            (add-variables from)
+                           (add-parent-variables nil)
                            (add-paths [])
                            (add-rule-names qualified-name)
                            (add-wheres where from))]
