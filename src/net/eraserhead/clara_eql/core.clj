@@ -4,7 +4,6 @@
    [clara.rules.accumulators :as acc]
    [clara-eav.eav :refer :all]
    [clojure.spec.alpha :as s]
-   [clojure.walk :as walk]
    [edn-query-language.core :as eql])
   (:import
    (clara_eav.eav EAV)))
@@ -30,15 +29,7 @@
     (:children query)))
 
 (defn remove-nil-values [result]
-  (clojure.walk/postwalk
-   (fn [x]
-     (cond->> x
-       (map? x)
-       (reduce-kv
-        (fn [m k v]
-          (cond-> m v (assoc k v)))
-        {})))
-   result))
+  (into {} (remove (fn [[_ v]] (nil? v))) result))
 
 (s/def ::variable (s/and simple-symbol? #(= \? (get (name %) 0))))
 
