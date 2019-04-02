@@ -40,17 +40,12 @@
          :where      (s/+ any?)))
 
 (defn- candidate-join-subrule
-  [query child-query]
-  `(r/defrule ~(symbol (str (::rule-name child-query) "__candidates"))
-     [:exists [Candidate (= ~'query '~(::rule-name query)) (= ~'e ?parent#)]]
-     [:exists [EAV (= ~'e ?parent#) (= ~'a ~(:key child-query)) (= ~'v ?this#)]]
+  [child]
+  `(r/defrule ~(symbol (str (::rule-name child) "__candidates"))
+     [:exists [Candidate (= ~'query '~(::parent-rule-name child)) (= ~'e ?parent#)]]
+     [:exists [EAV (= ~'e ?parent#) (= ~'a ~(:key child)) (= ~'v ?this#)]]
      ~'=>
-     (r/insert! (->Candidate '~(::rule-name child-query) ?this#))))
-
-(def ^:private children-with-parent
-  (mapcat #(for [child (:children %)]
-             {:parent %,
-              :child child})))
+     (r/insert! (->Candidate '~(::rule-name child) ?this#))))
 
 (defn- candidate-rules [root]
   (cons
@@ -60,10 +55,9 @@
        (r/insert! (->Candidate '~(::rule-name root) ~(::variable root))))
     (sequence (comp
                 (filter (comp #{:join :root} :type))
-                children-with-parent
-                (filter (comp #{:join} :type :child))
-                (map (fn [{:keys [parent child]}]
-                       (candidate-join-subrule parent child))))
+                (mapcat :children)
+                (filter (comp #{:join} :type))
+                (map candidate-join-subrule))
               (tree-seq :children :children root))))
 
 (defn- attribute-rule
@@ -84,6 +78,11 @@
                       (first ?results#)
                       ?results#)]
          (r/insert! (->AttributeQueryResult '~subrule-name ~(::variable query) ~attribute value#))))))
+
+(def ^:private children-with-parent
+  (mapcat #(for [child (:children %)]
+             {:parent %,
+              :child child})))
 
 (defn- attribute-rules [root]
   (sequence (comp
