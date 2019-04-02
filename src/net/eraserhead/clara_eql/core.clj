@@ -181,6 +181,11 @@
                                                path)))
              root))
 
+(defn- add-parent-rule-names [root rule-name]
+  (-> root
+    (assoc ::parent-rule-name rule-name)
+    (update :children (partial mapv #(add-parent-rule-names % (::rule-name root))))))
+
 (defn- add-wheres [root where from]
   (map-nodes (fn [{:keys [::path] :as node}]
                (let [where (first (reduce (fn [[where from] kw]
@@ -195,10 +200,11 @@
              root))
 
 (defn- prop-rule [query]
-  (let [{:keys [::rule-name ::parent-variable ::variable ::properties ::where]} query]
+  (let [{:keys [::rule-name ::parent-rule-name ::parent-variable ::variable ::properties ::where]} query]
     [`(r/defrule ~(symbol (name rule-name))
         ~@(when properties [properties])
-        ~@where
+        [:exists [Candidate (= ~'query '~parent-rule-name) (= ~'e ~parent-variable)]]
+        [:exists [EAV (= ~'e ~parent-variable) (= ~'a ~(:key query)) (= ~'v ~variable)]]
         ~'=>
         (r/insert! (->SingleAttributeQueryResult '~rule-name ~parent-variable ~(:key query) ~variable)))]))
 
@@ -242,6 +248,7 @@
                            (add-parent-variables nil)
                            (add-paths [])
                            (add-rule-names qualified-name)
+                           (add-parent-rule-names nil)
                            (add-wheres where from))]
     `(do
        ~@(candidate-rules query)
