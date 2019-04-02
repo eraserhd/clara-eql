@@ -31,7 +31,7 @@
        x))
    result))
 
-(def ^:dynamic *dump-session* false)
+(def ^:dynamic *dump-session* true)
 
 (defn- dump-facts [session]
   (when *dump-session*
