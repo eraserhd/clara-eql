@@ -184,12 +184,12 @@
 
 (defn- prop-rule [query]
   (let [{:keys [::rule-name ::parent-rule-name ::parent-variable ::variable ::properties]} query]
-    [`(r/defrule ~(symbol (name rule-name))
-        ~@(when properties [properties])
-        [:exists [Candidate (= ~'query '~parent-rule-name) (= ~'e ~parent-variable)]]
-        [:exists [EAV (= ~'e ~parent-variable) (= ~'a ~(:key query)) (= ~'v ~variable)]]
-        ~'=>
-        (r/insert! (->SingleAttributeQueryResult '~rule-name ~parent-variable ~(:key query) ~variable)))]))
+    `(r/defrule ~(symbol (name rule-name))
+       ~@(when properties [properties])
+       [:exists [Candidate (= ~'query '~parent-rule-name) (= ~'e ~parent-variable)]]
+       [:exists [EAV (= ~'e ~parent-variable) (= ~'a ~(:key query)) (= ~'v ~variable)]]
+       ~'=>
+       (r/insert! (->SingleAttributeQueryResult '~rule-name ~parent-variable ~(:key query) ~variable)))))
 
 (defn- prop-rules [root]
   (sequence (comp
