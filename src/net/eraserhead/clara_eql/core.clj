@@ -61,36 +61,30 @@
               (tree-seq :children :children root))))
 
 (defn- attribute-rule
-  [query child-query]
-  (let [subrule-name        (::rule-name child-query)
+  [child]
+  (let [subrule-name        (::rule-name child)
         attribute-rule-name (symbol (str (name subrule-name) "__attribute"))
-        attribute           (:key child-query)]
+        attribute           (:key child)]
     `(r/defrule ~attribute-rule-name
-       ~@(when-let [properties (::properties query)] [properties])
-       [:exists [Candidate (= ~'query '~(::rule-name query)) (= ~'e ~(::variable query))]]
+       ~@(when-let [properties (::properties child)] [properties])
+       [:exists [Candidate (= ~'query '~(::parent-rule-name child)) (= ~'e ~(::parent-variable child))]]
        [?many# ~'<- (acc/count) :from [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
        [?results# ~'<- (acc/all :result) :from [SingleAttributeQueryResult
                                                 (= ~'query '~subrule-name)
-                                                (= ~'e ~(::variable query))
+                                                (= ~'e ~(::parent-variable child))
                                                 (= ~'a ~attribute)]]
        ~'=>
        (let [value# (if (zero? ?many#)
                       (first ?results#)
                       ?results#)]
-         (r/insert! (->AttributeQueryResult '~subrule-name ~(::variable query) ~attribute value#))))))
-
-(def ^:private children-with-parent
-  (mapcat #(for [child (:children %)]
-             {:parent %,
-              :child child})))
+         (r/insert! (->AttributeQueryResult '~subrule-name ~(::parent-variable child) ~attribute value#))))))
 
 (defn- attribute-rules [root]
   (sequence (comp
               (filter (comp #{:root :join} :type))
-              children-with-parent
-              (filter (comp #{:prop :join} :type :child))
-              (map (fn [{:keys [parent child]}]
-                     (attribute-rule parent child))))
+              (mapcat :children)
+              (filter (comp #{:prop :join} :type))
+              (map attribute-rule))
             (tree-seq :children :children root)))
 
 (defn- attribute-productions
