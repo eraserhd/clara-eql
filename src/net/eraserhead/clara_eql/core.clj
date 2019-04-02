@@ -8,6 +8,7 @@
   (:import
    (clara_eav.eav EAV)))
 
+(defrecord Candidate [query e])
 (defrecord QueryResult [query e result])
 (defrecord SingleAttributeQueryResult [query e a result])
 (defrecord AttributeQueryResult [query e a result])
@@ -37,6 +38,29 @@
          :from       ::variable
          :where-kw   #{:where}
          :where      (s/+ any?)))
+
+(defn- candidate-join-subrule
+  [query child-query]
+  `(r/defrule ~(symbol (str (::rule-name child-query) "__candidates"))
+     [:exists [Candidate (= ~'query '~(::rule-name query)) (= ~'e ?parent#)]]
+     [:exists [EAV (= ~'e ?parent#) (= ~'a ~(:key child-query)) (= ~'v ?this#)]]
+     ~'=>
+     (r/insert! (->Candidate '~(::rule-name child-query) ?this#))))
+
+(defn- candidate-rules [root]
+  (cons
+    `(r/defrule ~(symbol (str (::rule-name root) "__candidates"))
+       ~@(::where root)
+       ~'=>
+       (r/insert! (->Candidate '~(::rule-name root) ~(::variable root))))
+    (sequence (comp
+                (filter (comp #{:join :root} :type))
+                (mapcat #(for [child (:children %)] [% child]))
+                (filter (fn [[parent child]]
+                          (= :join (:type child))))
+                (map (fn [[parent child]]
+                       (candidate-join-subrule parent child))))
+              (tree-seq :children :children root))))
 
 (defn- attribute-rule
   [query child-query]
@@ -78,7 +102,9 @@
     `(r/defrule ~(symbol (name rule-name))
        ~@(when doc [doc])
        ~@(when properties [properties])
-       ~@where
+       [Candidate (= ~'query '~rule-name) (= ~'e ~variable)]
+       ~@(when parent-variable
+           `([EAV (= ~'e ~parent-variable) (= ~'a ~(:key query)) (= ~'v ~variable)]))
        ~@(->> children
               (filter (comp #{:prop :join} :type))
               (map (partial attribute-productions variable)))
@@ -212,6 +238,7 @@
                            (add-rule-names qualified-name)
                            (add-wheres where from))]
     `(do
+       ~@(candidate-rules query)
        ~@(prop-rules query)
        ~@(attribute-rules query)
        ~@(join-rules query))))

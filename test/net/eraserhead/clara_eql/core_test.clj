@@ -2,6 +2,7 @@
   (:require
    [midje.sweet :refer :all]
    [clara.rules :as r]
+   [clara.rules.accumulators :as acc]
    [clara.tools.inspect :as inspect]
    [clara-eav.eav :as eav]
    [clojure.pprint]
@@ -9,13 +10,18 @@
    [net.eraserhead.clara-eql.core :refer :all])
   (:import
    (clara_eav.eav EAV)
-   (net.eraserhead.clara_eql.core QueryResult)))
+   (net.eraserhead.clara_eql.core Candidate QueryResult)))
 
 (clojure.spec.test.alpha/instrument)
 
 (r/defquery query-results
   [:?query]
   [QueryResult (= e :r) (= query ?query) (= result ?result)])
+
+(r/defquery bad-candidates
+  []
+  [?count <- (acc/count) :from [Candidate (= query ?query) (= e ?e)]]
+  [:test (not= 1 ?count)])
 
 (defn- sort-multi-values [result]
   (clojure.walk/postwalk
@@ -56,6 +62,8 @@
                     (r/insert-all (map (partial apply eav/->EAV) facts))
                     (r/fire-rules)
                     dump-facts)
+        _ (assert (empty? (r/query session bad-candidates))
+                  "found some duplicate Candidate records")
         results (map #(update % :?result sort-multi-values)
                      (r/query session query-results :?query rule-name))]
     (assert (= 1 (count results))
