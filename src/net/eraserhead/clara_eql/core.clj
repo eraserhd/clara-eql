@@ -47,6 +47,11 @@
      ~'=>
      (r/insert! (->Candidate '~(::rule-name child-query) ?this#))))
 
+(def ^:private children-with-parent
+  (mapcat #(for [child (:children %)]
+             {:parent %,
+              :child child})))
+
 (defn- candidate-rules [root]
   (cons
     `(r/defrule ~(symbol (str (::rule-name root) "__candidates"))
@@ -55,10 +60,9 @@
        (r/insert! (->Candidate '~(::rule-name root) ~(::variable root))))
     (sequence (comp
                 (filter (comp #{:join :root} :type))
-                (mapcat #(for [child (:children %)] [% child]))
-                (filter (fn [[parent child]]
-                          (= :join (:type child))))
-                (map (fn [[parent child]]
+                children-with-parent
+                (filter (comp #{:join} :type :child))
+                (map (fn [{:keys [parent child]}]
                        (candidate-join-subrule parent child))))
               (tree-seq :children :children root))))
 
@@ -84,10 +88,9 @@
 (defn- attribute-rules [root]
   (sequence (comp
               (filter (comp #{:root :join} :type))
-              (mapcat #(for [child (:children %)] [% child]))
-              (filter (fn [[parent child]]
-                        (#{:prop :join} (:type child))))
-              (map (fn [[parent child]]
+              children-with-parent
+              (filter (comp #{:prop :join} :type :child))
+              (map (fn [{:keys [parent child]}]
                      (attribute-rule parent child))))
             (tree-seq :children :children root)))
 
