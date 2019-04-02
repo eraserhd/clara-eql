@@ -98,22 +98,28 @@
 
 (defn- join-rule
   [query]
-  (let [{:keys [:children ::rule-name ::doc ::properties ::parent-variable ::variable ::where]} query]
-    `(r/defrule ~(symbol (name rule-name))
-       ~@(when doc [doc])
-       ~@(when properties [properties])
-       [Candidate (= ~'query '~rule-name) (= ~'e ~variable)]
-       ~@(when parent-variable
-           `([EAV (= ~'e ~parent-variable) (= ~'a ~(:key query)) (= ~'v ~variable)]))
-       ~@(->> children
-              (filter (comp #{:prop :join} :type))
-              (map (partial attribute-productions variable)))
-       ~'=>
-       (let [~'result (remove-nil-values ~(query-structure query))]
-         (r/insert!
-           ~(if parent-variable
-              `(->SingleAttributeQueryResult '~rule-name ~parent-variable ~(:key query) ~'result)
-              `(->QueryResult '~rule-name ~variable ~'result)))))))
+  (let [{:keys [:type :children ::rule-name ::doc ::properties ::variable]} query
+        child-productions (->> children
+                            (filter (comp #{:prop :join} :type))
+                            (map (partial attribute-productions variable)))]
+    (case type
+      :root `(r/defrule ~(symbol (name rule-name))
+               ~@(when doc [doc])
+               ~@(when properties [properties])
+               [Candidate (= ~'query '~rule-name) (= ~'e ~variable)]
+               ~@child-productions
+               ~'=>
+               (let [~'result (remove-nil-values ~(query-structure query))]
+                 (r/insert! (->QueryResult '~rule-name ~variable ~'result))))
+      :join `(r/defrule ~(symbol (name rule-name))
+               ~@(when doc [doc])
+               ~@(when properties [properties])
+               [Candidate (= ~'query '~rule-name) (= ~'e ~variable)]
+               ~@child-productions
+               [EAV (= ~'e ?parent#) (= ~'a ~(:key query)) (= ~'v ~variable)]
+               ~'=>
+               (let [~'result (remove-nil-values ~(query-structure query))]
+                 (r/insert! (->SingleAttributeQueryResult '~rule-name ?parent# ~(:key query) ~'result)))))))
 
 (defn- join-rules [root]
   (sequence (comp
