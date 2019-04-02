@@ -186,21 +186,8 @@
     (assoc ::parent-rule-name rule-name)
     (update :children (partial mapv #(add-parent-rule-names % (::rule-name root))))))
 
-(defn- add-wheres [root where from]
-  (map-nodes (fn [{:keys [::path] :as node}]
-               (let [where (first (reduce (fn [[where from] kw]
-                                            (let [vname (key->variable kw)]
-                                              [(concat
-                                                where
-                                                `([EAV (= ~'e ~from) (= ~'a ~kw) (= ~'v ~vname)]))
-                                               vname]))
-                                          [where from]
-                                          path))]
-                 (assoc node ::where where)))
-             root))
-
 (defn- prop-rule [query]
-  (let [{:keys [::rule-name ::parent-rule-name ::parent-variable ::variable ::properties ::where]} query]
+  (let [{:keys [::rule-name ::parent-rule-name ::parent-variable ::variable ::properties]} query]
     [`(r/defrule ~(symbol (name rule-name))
         ~@(when properties [properties])
         [:exists [Candidate (= ~'query '~parent-rule-name) (= ~'e ~parent-variable)]]
@@ -243,13 +230,13 @@
                            eql/query->ast
                            (cond-> doc (assoc ::doc doc))
                            (cond-> properties (assoc ::properties properties))
+                           (assoc ::where where)
                            (nest-salience (or (:salience properties) 0))
                            (add-variables from)
                            (add-parent-variables nil)
                            (add-paths [])
                            (add-rule-names qualified-name)
-                           (add-parent-rule-names nil)
-                           (add-wheres where from))]
+                           (add-parent-rule-names nil))]
     `(do
        ~@(candidate-rules query)
        ~@(prop-rules query)
