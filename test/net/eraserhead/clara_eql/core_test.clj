@@ -2,7 +2,9 @@
   (:require
    [midje.sweet :refer :all]
    [clara.rules :as r]
+   [clara.tools.inspect :as inspect]
    [clara-eav.eav :as eav]
+   [clojure.pprint]
    [clojure.spec.test.alpha]
    [net.eraserhead.clara-eql.core :refer :all])
   (:import
@@ -23,14 +25,39 @@
        x))
    result))
 
+(def ^:dynamic *dump-session* false)
+
+(defn- dump-facts [session]
+  (when *dump-session*
+    (println "\n\n================= Fact Dump ====================")
+    (doseq [[kind facts] (->> (inspect/inspect session)
+                              :insertions
+                              (mapcat val)
+                              (map :fact)
+                              (group-by class))]
+      (print (str "\n" (.getSimpleName kind) "::"))
+      (->> facts
+        (map #(into {} %))
+        (map (fn [fact]
+               (if (contains? fact :query)
+                 (update fact :query name)
+                 fact)))
+        clojure.pprint/print-table)))
+  session)
+
 (defn- check [rule facts]
+  ;; Unmap other rules first to make dump-facts nice
+  (doseq [[sym var] (ns-publics *ns*)
+          :when (:rule (meta var))]
+    (ns-unmap *ns* sym))
   (eval rule)
   (let [rule-name (symbol (str (ns-name *ns*)) (str (second rule)))
+        session (-> (r/mk-session 'net.eraserhead.clara-eql.core-test)
+                    (r/insert-all (map (partial apply eav/->EAV) facts))
+                    (r/fire-rules)
+                    dump-facts)
         results (map #(update % :?result sort-multi-values)
-                     (-> (r/mk-session 'net.eraserhead.clara-eql.core-test)
-                         (r/insert-all (map (partial apply eav/->EAV) facts))
-                         (r/fire-rules)
-                         (r/query query-results :?query rule-name)))]
+                     (r/query session query-results :?query rule-name))]
     (assert (= 1 (count results))
             (str "found " (count results) " results: " (pr-str results)))
     (:?result (first results))))
