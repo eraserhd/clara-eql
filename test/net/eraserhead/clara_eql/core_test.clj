@@ -23,9 +23,10 @@
        x))
    result))
 
-(defn- check [rule rule-name facts]
+(defn- check [rule facts]
   (eval rule)
-  (let [results (map #(update % :?result sort-multi-values)
+  (let [rule-name (symbol (str (ns-name *ns*)) (str (second rule)))
+        results (map #(update % :?result sort-multi-values)
                      (-> (r/mk-session 'net.eraserhead.clara-eql.core-test)
                          (r/insert-all (map (partial apply eav/->EAV) facts))
                          (r/fire-rules)
@@ -46,7 +47,6 @@
              :from ?eid
              :where
              [EAV (= e ?eid) (= a :foo/uuid)])
-          `basic-rule
           [[:r :foo/uuid "aaa"]]) => {:foo/uuid "aaa"})
       (fact "returns a result when root is missing a key"
         (check
@@ -56,7 +56,6 @@
              :from ?eid
              :where
              [EAV (= e ?eid) (= a :foo/uuid)])
-          `missing-property-rule
          [[:r :foo/uuid "aaa"]]) => {:foo/uuid "aaa"}))
     (facts "about cardinality-many keys"
       (fact "returns all values for a cardinality-many key"
@@ -66,7 +65,6 @@
              :from ?eid
              :where
              [EAV (= e ?eid) (= a :foo/uuid)])
-         `many-valued-key
          [[:foo/many-valued :db/cardinality :db.cardinality/many]
           [:r :foo/uuid "aaa"]
           [:r :foo/many-valued 11]
@@ -79,7 +77,6 @@
              :from ?eid
              :where
              [EAV (= e ?eid) (= a :foo/uuid)])
-          `many-valued-key
           [[:foo/many-valued :db/cardinality :db.cardinality/many]
            [:r :foo/uuid "aaa"]]) => {:foo/uuid        "aaa"
                                       :foo/many-valued []})))
@@ -91,7 +88,6 @@
            :from ?eid
            :where
            [EAV (= e ?eid) (= a :foo/bar)])
-        `basic-join-rule
         [[:r :foo/bar 10]
          [10 :bar/uuid "ccc"]]) => {:foo/bar {:bar/uuid "ccc"}})
     (fact "returns nested join values"
@@ -101,7 +97,6 @@
            :from ?eid
            :where
            [EAV (= e ?eid) (= a :a/b)])
-        `nested-join-rule
         [[:r :a/b 60]
          [60 :b/c 70]
          [70 :c/d "world"]]) => {:a/b {:b/c {:c/d "world"}}})
@@ -112,7 +107,6 @@
            :from ?eid
            :where
            [EAV (= e ?eid) (= a :foo/uuid) (= v "aaa")])
-        `many-valued-join
         [[:foo/many-valued :db/cardinality :db.cardinality/many]
          [:r :foo/uuid "aaa"]
          [:r :foo/many-valued 11]
