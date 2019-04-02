@@ -15,53 +15,6 @@
   []
   [QueryResult (= e ?root) (= query ?query) (= result ?result)])
 
-(defrule basic-rule
-  "Some basic rule"
-  {:salience 100}
-  :query [:foo/uuid]
-  :from ?eid
-  :where
-  [EAV (= e ?eid) (= a :foo/uuid)])
-
-(defrule missing-property-rule
-  "Missing property rule"
-  :query [:foo/uuid :foo/missing]
-  :from ?eid
-  :where
-  [EAV (= e ?eid) (= a :foo/uuid)])
-
-(defrule many-valued-key
-  :query [:foo/uuid :foo/many-valued]
-  :from ?eid
-  :where
-  [EAV (= e ?eid) (= a :foo/uuid)])
-
-(defrule basic-join-rule
-  :query [{:foo/bar [:bar/uuid]}]
-  :from ?eid
-  :where
-  [EAV (= e ?eid) (= a :foo/bar)])
-
-(defrule nested-join-rule
-  :query [{:a/b [{:b/c [:c/d]}]}]
-  :from ?eid
-  :where
-  [EAV (= e ?eid) (= a :a/b)])
-
-(defrule many-valued-join
-  :query [{:foo/many-valued [:bar/name]}]
-  :from ?eid
-  :where
-  [EAV (= e ?eid) (= a :foo/uuid) (= v "aaa")])
-
-(defrule union
-  :query [{:foo/many-valued
-           {:baz/id [:bar/name :baz/x]
-            :quux/id [:bar/name :quux/x]}}]
-  :from ?eid
-  :where
-  [EAV (= e ?eid) (= a :foo/uuid) (= v "aaa")])
-
 (defn- sort-multi-values [result]
   (clojure.walk/postwalk
    (fn [x]
@@ -70,16 +23,16 @@
        x))
    result))
 
-(defn- check [rule facts]
-  (let [session (-> (r/mk-session 'net.eraserhead.clara-eql.core
-                                  'net.eraserhead.clara-eql.core-test)
+(defn- check [rule rule-name facts]
+  (eval rule)
+  (let [session (-> (r/mk-session 'net.eraserhead.clara-eql.core-test)
                     (r/insert-all (map (partial apply eav/->EAV) facts))
                     (r/fire-rules))
         results (->> (r/query session query-results)
                      (map #(update % :?result sort-multi-values)))
         relevant (->> results
                       (filter #(= :r (:?root %)))
-                      (filter #(= rule (:?query %))))]
+                      (filter #(= rule-name (:?query %))))]
     (assert (= 1 (count relevant))
             (str "found " (count relevant) " results: " (pr-str relevant)))
     (:?result (first relevant))))
@@ -88,42 +41,89 @@
   (facts "about top-level keys"
     (facts "about single-cardinality keys"
       (fact "returns a result when all values are present"
-        (check `basic-rule [[:r :foo/uuid "aaa"]]) => {:foo/uuid "aaa"})
+        (check
+          '(defrule basic-rule
+             "Some basic rule"
+             {:salience 100}
+             :query [:foo/uuid]
+             :from ?eid
+             :where
+             [EAV (= e ?eid) (= a :foo/uuid)])
+          `basic-rule
+          [[:r :foo/uuid "aaa"]]) => {:foo/uuid "aaa"})
       (fact "returns a result when root is missing a key"
-        (check `missing-property-rule [[:r :foo/uuid "aaa"]]) => {:foo/uuid "aaa"}))
+        (check
+          '(defrule missing-property-rule
+             "Missing property rule"
+             :query [:foo/uuid :foo/missing]
+             :from ?eid
+             :where
+             [EAV (= e ?eid) (= a :foo/uuid)])
+          `missing-property-rule
+         [[:r :foo/uuid "aaa"]]) => {:foo/uuid "aaa"}))
     (facts "about cardinality-many keys"
       (fact "returns all values for a cardinality-many key"
-        (check `many-valued-key
-               [[:foo/many-valued :db/cardinality :db.cardinality/many]
-                [:r :foo/uuid "aaa"]
-                [:r :foo/many-valued 11]
-                [:r :foo/many-valued 12]]) => {:foo/uuid        "aaa"
-                                               :foo/many-valued [11 12]})
+        (check
+          '(defrule many-valued-key
+             :query [:foo/uuid :foo/many-valued]
+             :from ?eid
+             :where
+             [EAV (= e ?eid) (= a :foo/uuid)])
+         `many-valued-key
+         [[:foo/many-valued :db/cardinality :db.cardinality/many]
+          [:r :foo/uuid "aaa"]
+          [:r :foo/many-valued 11]
+          [:r :foo/many-valued 12]]) => {:foo/uuid        "aaa"
+                                         :foo/many-valued [11 12]})
       (fact "returns an empty set for a cardinality-many key if no values are present"
-        (check `many-valued-key 
-               [[:foo/many-valued :db/cardinality :db.cardinality/many]
-                [:r :foo/uuid "aaa"]]) => {:foo/uuid        "aaa"
-                                           :foo/many-valued []})))
+        (check
+          '(defrule many-valued-key
+             :query [:foo/uuid :foo/many-valued]
+             :from ?eid
+             :where
+             [EAV (= e ?eid) (= a :foo/uuid)])
+          `many-valued-key
+          [[:foo/many-valued :db/cardinality :db.cardinality/many]
+           [:r :foo/uuid "aaa"]]) => {:foo/uuid        "aaa"
+                                      :foo/many-valued []})))
   (facts "about joins"
     (fact "returns joined values"
-      (check `basic-join-rule
-             [[:r :foo/bar 10]
-              [10 :bar/uuid "ccc"]]) => {:foo/bar {:bar/uuid "ccc"}})
+      (check
+        '(defrule basic-join-rule
+           :query [{:foo/bar [:bar/uuid]}]
+           :from ?eid
+           :where
+           [EAV (= e ?eid) (= a :foo/bar)])
+        `basic-join-rule
+        [[:r :foo/bar 10]
+         [10 :bar/uuid "ccc"]]) => {:foo/bar {:bar/uuid "ccc"}})
     (fact "returns nested join values"
-      (check `nested-join-rule
-             [[:r :a/b 60]
-              [60 :b/c 70]
-              [70 :c/d "world"]]) => {:a/b {:b/c {:c/d "world"}}})
+      (check
+        '(defrule nested-join-rule
+           :query [{:a/b [{:b/c [:c/d]}]}]
+           :from ?eid
+           :where
+           [EAV (= e ?eid) (= a :a/b)])
+        `nested-join-rule
+        [[:r :a/b 60]
+         [60 :b/c 70]
+         [70 :c/d "world"]]) => {:a/b {:b/c {:c/d "world"}}})
     (fact "returns collections for many-valued nested join values"
-      (check `many-valued-join
-             [[:foo/many-valued :db/cardinality :db.cardinality/many]
-              [:r :foo/uuid "aaa"]
-              [:r :foo/many-valued 11]
-              [:r :foo/many-valued 12]
-              [11 :bar/name "b11"]
-              [12 :bar/name "b12"]]) => {:foo/many-valued [{:bar/name "b11"}
-                                                           {:bar/name "b12"}]}))
+      (check
+        '(defrule many-valued-join
+           :query [{:foo/many-valued [:bar/name]}]
+           :from ?eid
+           :where
+           [EAV (= e ?eid) (= a :foo/uuid) (= v "aaa")])
+        `many-valued-join
+        [[:foo/many-valued :db/cardinality :db.cardinality/many]
+         [:r :foo/uuid "aaa"]
+         [:r :foo/many-valued 11]
+         [:r :foo/many-valued 12]
+         [11 :bar/name "b11"]
+         [12 :bar/name "b12"]]) => {:foo/many-valued [{:bar/name "b11"}
+                                                      {:bar/name "b12"}]})
     (facts "about unions"
       (future-fact "returns values from all branches of the union"))
     (facts "about idents"
-      (future-fact "returns values from the specified object")))
+      (future-fact "returns values from the specified object"))))
