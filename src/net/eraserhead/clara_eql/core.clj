@@ -69,7 +69,7 @@
         attribute           (:key child-query)]
     `(r/defrule ~attribute-rule-name
        ~@(when-let [properties (::properties query)] [properties])
-       [Candidate (= ~'query '~(::rule-name query)) (= ~'e ~(::variable query))]
+       [:exists [Candidate (= ~'query '~(::rule-name query)) (= ~'e ~(::variable query))]]
        [?many# ~'<- (acc/count) :from [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
        [?results# ~'<- (acc/all :result) :from [SingleAttributeQueryResult
                                                 (= ~'query '~subrule-name)
@@ -106,7 +106,7 @@
       :root `(r/defrule ~(symbol (name rule-name))
                ~@(when doc [doc])
                ~@(when properties [properties])
-               [Candidate (= ~'query '~rule-name) (= ~'e ~variable)]
+               [:exists [Candidate (= ~'query '~rule-name) (= ~'e ~variable)]]
                ~@child-productions
                ~'=>
                (let [~'result (remove-nil-values ~(query-structure query))]
@@ -114,7 +114,7 @@
       :join `(r/defrule ~(symbol (name rule-name))
                ~@(when doc [doc])
                ~@(when properties [properties])
-               [Candidate (= ~'query '~rule-name) (= ~'e ~variable)]
+               [:exists [Candidate (= ~'query '~rule-name) (= ~'e ~variable)]]
                ~@child-productions
                [EAV (= ~'e ?parent#) (= ~'a ~(:key query)) (= ~'v ~variable)]
                ~'=>

@@ -18,11 +18,6 @@
   [:?query]
   [QueryResult (= e :r) (= query ?query) (= result ?result)])
 
-(r/defquery bad-candidates
-  []
-  [?count <- (acc/count) :from [Candidate (= query ?query) (= e ?e)]]
-  [:test (not= 1 ?count)])
-
 (defn- sort-multi-values [result]
   (clojure.walk/postwalk
    (fn [x]
@@ -31,7 +26,7 @@
        x))
    result))
 
-(def ^:dynamic *dump-session* true)
+(def ^:dynamic *dump-session* false)
 
 (defn- dump-facts [session]
   (when *dump-session*
@@ -62,8 +57,6 @@
                     (r/insert-all (map (partial apply eav/->EAV) facts))
                     (r/fire-rules)
                     dump-facts)
-        _ (assert (empty? (r/query session bad-candidates))
-                  "found some duplicate Candidate records")
         results (map #(update % :?result sort-multi-values)
                      (r/query session query-results :?query rule-name))]
     (assert (= 1 (count results))
@@ -149,7 +142,27 @@
          [11 :bar/name "b11"]
          [12 :bar/name "b12"]]) => {:foo/many-valued [{:bar/name "b11"}
                                                       {:bar/name "b12"}]})
-    (facts "about unions"
-      (future-fact "returns values from all branches of the union"))
-    (facts "about idents"
-      (future-fact "returns values from the specified object"))))
+    (fact "regression: shared subtrees aren't multiplied"
+      ;; This was producing twice as many `{:bar/name "bXX"}` maps because
+      ;; the join rules were generating a result for each root times each
+      ;; entity, instead of just for each entity.
+      (check
+        '(defrule many-valued-join
+           :query [{:foo/many-valued [:bar/name]}]
+           :from ?eid
+           :where
+           [EAV (= e ?eid) (= a :foo/uuid)])
+        [[:foo/many-valued :db/cardinality :db.cardinality/many]
+         [:r :foo/uuid "aaa"]
+         [:r :foo/many-valued 11]
+         [:r :foo/many-valued 12]
+         [99 :foo/uuid "bbb"]
+         [99 :foo/many-valued 11]
+         [99 :foo/many-valued 12]
+         [11 :bar/name "b11"]
+         [12 :bar/name "b12"]]) => {:foo/many-valued [{:bar/name "b11"}
+                                                      {:bar/name "b12"}]}))
+  (facts "about unions"
+    (future-fact "returns values from all branches of the union"))
+  (facts "about idents"
+    (future-fact "returns values from the specified object")))
