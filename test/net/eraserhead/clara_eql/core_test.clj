@@ -70,65 +70,60 @@
        x))
    result))
 
-(facts "about defrule"
+(defn- check [rule facts]
   (let [session (-> (r/mk-session 'net.eraserhead.clara-eql.core
                                   'net.eraserhead.clara-eql.core-test)
-                    (r/insert (eav/->EAV :foo/many-valued :db/cardinality :db.cardinality/many)
-                              (eav/->EAV 10 :foo/uuid "aaa")
-                              (eav/->EAV 10 :foo/many-valued 11)
-                              (eav/->EAV 11 :bar/name "b11")
-                              (eav/->EAV 11 :baz/id 42)
-                              (eav/->EAV 11 :baz/x -42)
-                              (eav/->EAV 12 :bar/name "b12")
-                              (eav/->EAV 12 :quux/id 76)
-                              (eav/->EAV 12 :quux/x -76)
-                              (eav/->EAV 10 :foo/many-valued 12)
-                              (eav/->EAV 20 :foo/uuid "bbb")
-                              (eav/->EAV 30 :foo/bar 40)
-                              (eav/->EAV 40 :bar/uuid "ccc")
-                              (eav/->EAV 50 :a/b 60)
-                              (eav/->EAV 60 :b/c 70)
-                              (eav/->EAV 70 :c/d "world"))
+                    (r/insert-all (map (partial apply eav/->EAV) facts))
                     (r/fire-rules))
         results (->> (r/query session query-results)
                      (map #(update % :?result sort-multi-values)))
-        result (fn [query root]
-                 (let [relevant (->> results
-                                     (filter #(= root (:?root %)))
-                                     (filter #(= query (:?query %))))]
-                   (assert (= 1 (count relevant))
-                           (str "found " (count relevant) " results: " (pr-str relevant)))
-                   (:?result (first relevant))))]
-    (facts "about top-level keys"
-      (facts "about single-cardinality keys"
-        (fact "returns a result when all values are present"
-          (result `basic-rule 10) => {:foo/uuid "aaa"})
-        (fact "returns a result when root is missing a key"
-          (result `missing-property-rule 10) => {:foo/uuid "aaa"}))
-      (facts "about cardinality-many keys"
-        (fact "returns all values for a cardinality-many key"
-          (result `many-valued-key 10) => {:foo/uuid        "aaa"
-                                           :foo/many-valued [11 12]})
-        (fact "returns an empty set for a cardinality-many key if no values are present"
-          (result `many-valued-key 20) => {:foo/uuid        "bbb"
+        relevant (->> results
+                      (filter #(= :r (:?root %)))
+                      (filter #(= rule (:?query %))))]
+    (assert (= 1 (count relevant))
+            (str "found " (count relevant) " results: " (pr-str relevant)))
+    (:?result (first relevant))))
+
+(facts "about defrule"
+  (facts "about top-level keys"
+    (facts "about single-cardinality keys"
+      (fact "returns a result when all values are present"
+        (check `basic-rule [[:r :foo/uuid "aaa"]]) => {:foo/uuid "aaa"})
+      (fact "returns a result when root is missing a key"
+        (check `missing-property-rule [[:r :foo/uuid "aaa"]]) => {:foo/uuid "aaa"}))
+    (facts "about cardinality-many keys"
+      (fact "returns all values for a cardinality-many key"
+        (check `many-valued-key
+               [[:foo/many-valued :db/cardinality :db.cardinality/many]
+                [:r :foo/uuid "aaa"]
+                [:r :foo/many-valued 11]
+                [:r :foo/many-valued 12]]) => {:foo/uuid        "aaa"
+                                               :foo/many-valued [11 12]})
+      (fact "returns an empty set for a cardinality-many key if no values are present"
+        (check `many-valued-key 
+               [[:foo/many-valued :db/cardinality :db.cardinality/many]
+                [:r :foo/uuid "aaa"]]) => {:foo/uuid        "aaa"
                                            :foo/many-valued []})))
-    (facts "about joins"
-      (fact "returns joined values"
-        (result `basic-join-rule 30) => {:foo/bar {:bar/uuid "ccc"}})
-      (fact "returns nested join values"
-        (result `nested-join-rule 50) => {:a/b {:b/c {:c/d "world"}}})
-      (fact "returns collections for many-valued nested join values"
-        (result `many-valued-join 10) => {:foo/many-valued [{:bar/name "b11"}
-                                                            {:bar/name "b12"}]}))
+  (facts "about joins"
+    (fact "returns joined values"
+      (check `basic-join-rule
+             [[:r :foo/bar 10]
+              [10 :bar/uuid "ccc"]]) => {:foo/bar {:bar/uuid "ccc"}})
+    (fact "returns nested join values"
+      (check `nested-join-rule
+             [[:r :a/b 60]
+              [60 :b/c 70]
+              [70 :c/d "world"]]) => {:a/b {:b/c {:c/d "world"}}})
+    (fact "returns collections for many-valued nested join values"
+      (check `many-valued-join
+             [[:foo/many-valued :db/cardinality :db.cardinality/many]
+              [:r :foo/uuid "aaa"]
+              [:r :foo/many-valued 11]
+              [:r :foo/many-valued 12]
+              [11 :bar/name "b11"]
+              [12 :bar/name "b12"]]) => {:foo/many-valued [{:bar/name "b11"}
+                                                           {:bar/name "b12"}]}))
     (facts "about unions"
-      (future-fact "returns values from all branches of the union"
-        (let [result (->> results
-                          (filter #(= `union (:?query %)))
-                          (filter #(= 10 (:?root %)))
-                          (map :?result))]
-          result => {:foo/many-valued [{:bar/name "b11"
-                                        :baz/x -42}
-                                       {:bar/name "b12"
-                                        :quux/x -76}]})))
+      (future-fact "returns values from all branches of the union"))
     (facts "about idents"
-      (future-fact "returns values from the specified object"))))
+      (future-fact "returns values from the specified object")))
