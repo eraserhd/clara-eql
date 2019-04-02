@@ -12,8 +12,8 @@
 (clojure.spec.test.alpha/instrument)
 
 (r/defquery query-results
-  []
-  [QueryResult (= e ?root) (= query ?query) (= result ?result)])
+  [:?query]
+  [QueryResult (= e :r) (= query ?query) (= result ?result)])
 
 (defn- sort-multi-values [result]
   (clojure.walk/postwalk
@@ -25,17 +25,14 @@
 
 (defn- check [rule rule-name facts]
   (eval rule)
-  (let [session (-> (r/mk-session 'net.eraserhead.clara-eql.core-test)
-                    (r/insert-all (map (partial apply eav/->EAV) facts))
-                    (r/fire-rules))
-        results (->> (r/query session query-results)
-                     (map #(update % :?result sort-multi-values)))
-        relevant (->> results
-                      (filter #(= :r (:?root %)))
-                      (filter #(= rule-name (:?query %))))]
-    (assert (= 1 (count relevant))
-            (str "found " (count relevant) " results: " (pr-str relevant)))
-    (:?result (first relevant))))
+  (let [results (map #(update % :?result sort-multi-values)
+                     (-> (r/mk-session 'net.eraserhead.clara-eql.core-test)
+                         (r/insert-all (map (partial apply eav/->EAV) facts))
+                         (r/fire-rules)
+                         (r/query query-results :?query rule-name)))]
+    (assert (= 1 (count results))
+            (str "found " (count results) " results: " (pr-str results)))
+    (:?result (first results))))
 
 (facts "about defrule"
   (facts "about top-level keys"
