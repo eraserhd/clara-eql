@@ -69,7 +69,7 @@
         attribute           (:key child-query)]
     `(r/defrule ~attribute-rule-name
        ~@(when-let [properties (::properties query)] [properties])
-       ~@(::where query)
+       [Candidate (= ~'query '~(::rule-name query)) (= ~'e ~(::variable query))]
        [?many# ~'<- (acc/count) :from [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
        [?results# ~'<- (acc/all :result) :from [SingleAttributeQueryResult
                                                 (= ~'query '~subrule-name)
