@@ -42,6 +42,7 @@
 (defn- candidate-join-subrule
   [child]
   `(r/defrule ~(symbol (str (::rule-name child) "__candidates"))
+     {:salience ~(::candidate-salience child)}
      [:exists [Candidate (= ~'query '~(::parent-rule-name child)) (= ~'e ?parent#)]]
      [:exists [EAV (= ~'e ?parent#) (= ~'a ~(:key child)) (= ~'v ?this#)]]
      ~'=>
@@ -50,6 +51,7 @@
 (defn- candidate-rules [root]
   (cons
     `(r/defrule ~(symbol (str (::rule-name root) "__candidates"))
+       {:salience ~(::candidate-salience root)}
        ~@(::where root)
        ~'=>
        (r/insert! (->Candidate '~(::rule-name root) ~(::variable root))))
@@ -140,6 +142,17 @@
                                 (nest-salience child (inc salience)))
                               children)))))
 
+(defn- nest-candidate-salience
+  "Candidates should fire in the order opposite of other rules (outermost
+  first)."
+  [root salience]
+  (-> root
+    (assoc ::candidate-salience salience)
+    (update :children (fn [children]
+                        (mapv (fn [child]
+                                (nest-candidate-salience child (dec salience)))
+                              children)))))
+
 (defn- add-variables [root from]
   (map-nodes (fn [node]
                (case (:type node)
@@ -228,6 +241,7 @@
                            (cond-> properties (assoc ::properties properties))
                            (assoc ::where where)
                            (nest-salience (or (:salience properties) 0))
+                           (nest-candidate-salience (+ 35 (or (:salience properties) 0)))
                            (add-variables from)
                            (add-parent-variables nil)
                            (add-paths [])
