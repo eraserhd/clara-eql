@@ -35,15 +35,12 @@
     (fact "reduce-fn accumulates datoms"
       (eavs [[:+ 42 :foo/bar "hello"]])
       =>
-      {42      {:foo/bar ["hello"]}
-       "hello" {:foo/_bar [42]}})
+      {42 {:foo/bar ["hello"]}})
     (fact "accumulates multiple values for an (eid, attribute) pair"
       (sort-eavs
        (eavs [[:+ 42 :foo/bar "hello"] [:+ 42 :foo/bar "goodbye"]]))
       =>
-      {42        {:foo/bar ["goodbye" "hello"]}
-       "goodbye" {:foo/_bar [42]}
-       "hello"   {:foo/_bar [42]}})
+      {42 {:foo/bar ["goodbye" "hello"]}})
     (fact "ignores non-keyword eavs"
       (eavs [[:+ 42 68 "hello"]]) => {}))
 
@@ -54,24 +51,21 @@
               [:+ 42 :foo/bar "goodbye"]
               [:- 42 :foo/bar "hello"]]))
       =>
-      {42        {:foo/bar ["goodbye"]}
-       "goodbye" {:foo/_bar [42]}})
+      {42 {:foo/bar ["goodbye"]}})
     (fact "can retract one of a many-valued attribute when there are equal values"
       (sort-eavs
        (eavs [[:+ 42 :foo/bar "hello"]
               [:+ 42 :foo/bar "hello"]
               [:- 42 :foo/bar "hello"]]))
       =>
-      {42      {:foo/bar ["hello"]}
-       "hello" {:foo/_bar [42]}})
+      {42 {:foo/bar ["hello"]}})
     (fact "retracting all values removes attribute from map"
       (sort-eavs
        (eavs [[:+ 42 :foo/bar "hello"]
               [:+ 42 :bar/quux "hello"]
               [:- 42 :foo/bar "hello"]]))
       =>
-      {42      {:bar/quux ["hello"]}
-       "hello" {:bar/_quux [42]}})
+      {42 {:bar/quux ["hello"]}})
     (fact "retracting all attributes removes entity from map"
       (eavs [[:+ 42 :foo/bar "hello"] [:- 42 :foo/bar "hello"]]) => {})
     (fact "ignores non-keyword eavs"
@@ -84,9 +78,5 @@
         (eavs [[:+ 42 :foo/bar "hello"] [:+ 42 :foo/bar "goodbye"]])
         (eavs [[:+ 42 :foo/bar "baz"] [:+ 26 :bar/baz "foo"]])))
       =>
-      {42        {:foo/bar ["baz" "goodbye" "hello"]}
-       26        {:bar/baz ["foo"]}
-       "baz"     {:foo/_bar [42]}
-       "foo"     {:bar/_baz [26]}
-       "goodbye" {:foo/_bar [42]}
-       "hello"   {:foo/_bar [42]}})))
+      {42 {:foo/bar ["baz" "goodbye" "hello"]}
+       26 {:bar/baz ["foo"]}})))
