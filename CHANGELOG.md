@@ -1,5 +1,7 @@
 # Change Log
 
+## [Unreleased]
+
 ## [0.1.3]
 ### Changes
 - Remove handling of reversed attributes.  Instead of presuming how they
@@ -19,6 +21,7 @@
 ## 0.1.0 - 2019-02-26
 - First release!
 
-[0.1.1]: https://github.com/eraserhd/clara-eql/compare/0.1.0...0.1.1
-[0.1.2]: https://github.com/eraserhd/clara-eql/compare/0.1.1...0.1.2
+[Unreleased]: https://github.com/eraserhd/clara-eql/compare/0.1.3...HEAD
 [0.1.3]: https://github.com/eraserhd/clara-eql/compare/0.1.2...0.1.3
+[0.1.2]: https://github.com/eraserhd/clara-eql/compare/0.1.1...0.1.2
+[0.1.1]: https://github.com/eraserhd/clara-eql/compare/0.1.0...0.1.1
