@@ -7,19 +7,6 @@
   (:import
    (clara_eav.eav EAV)))
 
-(defn- reversed-attribute?
-  "Returns true if k is a reversed attribute."
-  [k]
-  (and (qualified-keyword? k)
-       (= \_ (get (name k) 0))))
-
-(defn- reverse-attribute
-  "Reverse an attribute - turns normal into reversed, reversed into normal."
-  [k]
-  (if (reversed-attribute? k)
-    (keyword (namespace k) (subs (name k) 1))
-    (keyword (namespace k) (str "_" (name k)))))
-
 (defquery eav-map
   []
   [?eav-map <- eav-map/eav-map :from [EAV]])
@@ -42,9 +29,7 @@
   (-> (reduce
        (fn [result {:keys [key children] :as subpattern}]
          (if-some [values (seq (get-in eav-map [eid key]))]
-           (let [many? (or
-                        (reversed-attribute? key)
-                        (= :db.cardinality/many (first (get-in eav-map [key :db/cardinality]))))
+           (let [many? (= :db.cardinality/many (first (get-in eav-map [key :db/cardinality])))
                  values (cond->> values
                           true (mapv (fn [value]
                                        (if (fn? value)
