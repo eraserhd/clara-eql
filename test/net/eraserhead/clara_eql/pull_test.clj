@@ -2,10 +2,10 @@
   (:require
    [clara.rules :as r]
    [clara-eav.eav :as eav]
-   [midje.sweet :refer :all]
+   [clojure.test :refer [deftest testing is]]
    [net.eraserhead.clara-eql.pull :as pull]))
 
-(facts "about pull"
+(deftest t-pull
   (let [session (-> (r/mk-session 'net.eraserhead.clara-eql.pull)
                     (r/insert
                      (eav/->EAV 10 :foo/uuid "aaa")
@@ -19,16 +19,16 @@
                      (eav/->EAV :foo/many :db/cardinality :db.cardinality/many)
                      (eav/->EAV 40 :foo/lazy (constantly 42)))
                     (r/fire-rules))]
-    (fact "Can pull single cardinality attribute"
-      (pull/pull session [:foo/uuid] 10) => {:foo/uuid "aaa"})
-    (fact "does not add attributes for which there are no values"
-      (pull/pull session [:foo/missing] 10) => nil?
-      (pull/pull session [:foo/uuid :foo/missing] 10) => {:foo/uuid "aaa"})
-    (fact "can pull single-cardinality ref attributes"
-      (pull/pull session [:foo/bar] 10) => {:foo/bar 20})
-    (fact "can pull single-cardinality attributes recursively"
-      (pull/pull session [{:foo/bar [:bar/uuid]}] 10) => {:foo/bar {:bar/uuid "bbb"}})
-    (fact "can pull multi-cardinality attributes recursively"
-      (:foo/many (pull/pull session [:foo/many] 30)) => (just ["many" "many1" "many2"] :in-any-order))
-    (fact "lazy values are expanded"
-      (pull/pull session [:foo/lazy] 40) => {:foo/lazy 42})))
+    (is (= {:foo/uuid "aaa"} (pull/pull session [:foo/uuid] 10))
+        "Can pull single cardinality attribute")
+    (testing "does not add attributes for which there are no values"
+      (is (nil? (pull/pull session [:foo/missing] 10)))
+      (is (= {:foo/uuid "aaa"} (pull/pull session [:foo/uuid :foo/missing] 10))))
+    (is (= {:foo/bar 20} (pull/pull session [:foo/bar] 10))
+        "can pull single-cardinality ref attributes")
+    (is (= {:foo/bar {:bar/uuid "bbb"}} (pull/pull session [{:foo/bar [:bar/uuid]}] 10))
+        "can pull single-cardinality attributes recursively")
+    (is (= #{"many" "many1" "many2"} (->> (pull/pull session [:foo/many] 30) :foo/many (into #{})))
+        "can pull multi-cardinality attributes recursively")
+    (is (= {:foo/lazy 42} (pull/pull session [:foo/lazy] 40))
+        "lazy values are expanded")))

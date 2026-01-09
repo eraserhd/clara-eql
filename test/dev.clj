@@ -2,8 +2,7 @@
   (:require
    [clojure.walk]
    [zprint.core :as zp]
-   [net.eraserhead.clara-eql.core :refer [defrule]]
-   [midje.repl :refer :all]))
+   [net.eraserhead.clara-eql.core :refer [defrule]]))
 
 (defn- make-symbols-easier-to-read [code]
   (clojure.walk/postwalk

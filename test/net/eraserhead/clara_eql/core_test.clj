@@ -1,10 +1,10 @@
 (ns net.eraserhead.clara-eql.core-test
   (:require
-   [midje.sweet :refer :all]
    [clara.rules :as r]
    [clara.rules.accumulators :as acc]
    [clara.tools.inspect :as inspect]
    [clara-eav.eav :as eav]
+   [clojure.test :refer [deftest testing is]]
    [clojure.pprint]
    [clojure.spec.test.alpha]
    [net.eraserhead.clara-eql.core :refer :all])
@@ -27,6 +27,7 @@
    result))
 
 (def ^:dynamic *dump-session* false)
+(def ^:private this-ns *ns*)
 
 (defn- dump-facts [session]
   (when *dump-session*
@@ -48,11 +49,12 @@
 
 (defn- check [rule facts]
   ;; Unmap other rules first to make dump-facts nice
-  (doseq [[sym var] (ns-publics *ns*)
+  (doseq [[sym var] (ns-publics this-ns)
           :when (:rule (meta var))]
-    (ns-unmap *ns* sym))
-  (eval rule)
-  (let [rule-name (symbol (str (ns-name *ns*)) (str (second rule)))
+    (ns-unmap this-ns sym))
+  (binding [*ns* this-ns]
+    (eval rule))
+  (let [rule-name (symbol (str (ns-name this-ns)) (str (second rule)))
         session (-> (r/mk-session 'net.eraserhead.clara-eql.core-test)
                     (r/insert-all (map (partial apply eav/->EAV) facts))
                     (r/fire-rules)
@@ -63,106 +65,114 @@
             (str "found " (count results) " results: " (pr-str results)))
     (:?result (first results))))
 
-(facts "about defrule"
-  (facts "about top-level keys"
-    (facts "about single-cardinality keys"
-      (fact "returns a result when all values are present"
-        (check
-          '(defrule basic-rule
-             "Some basic rule"
-             {:salience 100}
-             :query [:foo/uuid]
-             :from ?eid
-             :where
-             [EAV (= e ?eid) (= a :foo/uuid)])
-          [[:r :foo/uuid "aaa"]]) => {:foo/uuid "aaa"})
-      (fact "returns a result when root is missing a key"
-        (check
-          '(defrule missing-property-rule
-             "Missing property rule"
-             :query [:foo/uuid :foo/missing]
-             :from ?eid
-             :where
-             [EAV (= e ?eid) (= a :foo/uuid)])
-         [[:r :foo/uuid "aaa"]]) => {:foo/uuid "aaa"}))
-    (facts "about cardinality-many keys"
-      (fact "returns all values for a cardinality-many key"
-        (check
-          '(defrule many-valued-key
-             :query [:foo/uuid :foo/many-valued]
-             :from ?eid
-             :where
-             [EAV (= e ?eid) (= a :foo/uuid)])
-         [[:foo/many-valued :db/cardinality :db.cardinality/many]
-          [:r :foo/uuid "aaa"]
-          [:r :foo/many-valued 11]
-          [:r :foo/many-valued 12]]) => {:foo/uuid        "aaa"
-                                         :foo/many-valued [11 12]})
-      (fact "returns an empty set for a cardinality-many key if no values are present"
-        (check
-          '(defrule many-valued-key
-             :query [:foo/uuid :foo/many-valued]
-             :from ?eid
-             :where
-             [EAV (= e ?eid) (= a :foo/uuid)])
-          [[:foo/many-valued :db/cardinality :db.cardinality/many]
-           [:r :foo/uuid "aaa"]]) => {:foo/uuid        "aaa"
-                                      :foo/many-valued []})))
-  (facts "about joins"
-    (fact "returns joined values"
-      (check
-        '(defrule basic-join-rule
-           :query [{:foo/bar [:bar/uuid]}]
-           :from ?eid
-           :where
-           [EAV (= e ?eid) (= a :foo/bar)])
-        [[:r :foo/bar 10]
-         [10 :bar/uuid "ccc"]]) => {:foo/bar {:bar/uuid "ccc"}})
-    (fact "returns nested join values"
-      (check
-        '(defrule nested-join-rule
-           :query [{:a/b [{:b/c [:c/d]}]}]
-           :from ?eid
-           :where
-           [EAV (= e ?eid) (= a :a/b)])
-        [[:r :a/b 60]
-         [60 :b/c 70]
-         [70 :c/d "world"]]) => {:a/b {:b/c {:c/d "world"}}})
-    (fact "returns collections for many-valued nested join values"
-      (check
-        '(defrule many-valued-join
-           :query [{:foo/many-valued [:bar/name]}]
-           :from ?eid
-           :where
-           [EAV (= e ?eid) (= a :foo/uuid) (= v "aaa")])
-        [[:foo/many-valued :db/cardinality :db.cardinality/many]
-         [:r :foo/uuid "aaa"]
-         [:r :foo/many-valued 11]
-         [:r :foo/many-valued 12]
-         [11 :bar/name "b11"]
-         [12 :bar/name "b12"]]) => {:foo/many-valued [{:bar/name "b11"}
-                                                      {:bar/name "b12"}]})
-    (fact "regression: shared subtrees aren't multiplied"
-      ;; This was producing twice as many `{:bar/name "bXX"}` maps because
-      ;; the join rules were generating a result for each root times each
-      ;; entity, instead of just for each entity.
-      (check
-        '(defrule many-valued-join
-           :query [{:foo/many-valued [:bar/name]}]
-           :from ?eid
-           :where
-           [EAV (= e ?eid) (= a :foo/uuid)])
-        [[:foo/many-valued :db/cardinality :db.cardinality/many]
-         [:r :foo/uuid "aaa"]
-         [:r :foo/many-valued 11]
-         [:r :foo/many-valued 12]
-         [99 :foo/uuid "bbb"]
-         [99 :foo/many-valued 11]
-         [99 :foo/many-valued 12]
-         [11 :bar/name "b11"]
-         [12 :bar/name "b12"]]) => {:foo/many-valued [{:bar/name "b11"}
-                                                      {:bar/name "b12"}]}))
-  (facts "about unions"
-    (future-fact "returns values from all branches of the union"))
-  (facts "about idents"
-    (future-fact "returns values from the specified object")))
+(deftest t-defrule
+  (testing "about top-level keys"
+    (testing "about single-cardinality keys"
+      (is (= {:foo/uuid "aaa"}
+             (check
+               '(defrule basic-rule
+                  "Some basic rule"
+                  {:salience 100}
+                  :query [:foo/uuid]
+                  :from ?eid
+                  :where
+                  [EAV (= e ?eid) (= a :foo/uuid)])
+               [[:r :foo/uuid "aaa"]]))
+          "returns a result when all values are present")
+      (is (= {:foo/uuid "aaa"}
+             (check
+               '(defrule missing-property-rule
+                  "Missing property rule"
+                  :query [:foo/uuid :foo/missing]
+                  :from ?eid
+                  :where
+                  [EAV (= e ?eid) (= a :foo/uuid)])
+              [[:r :foo/uuid "aaa"]]))
+          "returns a result when root is missing a key"))
+    (testing "about cardinality-many keys"
+      (is (= {:foo/uuid        "aaa"
+              :foo/many-valued [11 12]}
+             (check
+               '(defrule many-valued-key
+                  :query [:foo/uuid :foo/many-valued]
+                  :from ?eid
+                  :where
+                  [EAV (= e ?eid) (= a :foo/uuid)])
+              [[:foo/many-valued :db/cardinality :db.cardinality/many]
+               [:r :foo/uuid "aaa"]
+               [:r :foo/many-valued 11]
+               [:r :foo/many-valued 12]]))
+          "returns all values for a cardinality-many key")
+      (is (= {:foo/uuid        "aaa"
+              :foo/many-valued []}
+             (check
+               '(defrule many-valued-key
+                  :query [:foo/uuid :foo/many-valued]
+                  :from ?eid
+                  :where
+                  [EAV (= e ?eid) (= a :foo/uuid)])
+               [[:foo/many-valued :db/cardinality :db.cardinality/many]
+                [:r :foo/uuid "aaa"]]))
+          "returns an empty set for a cardinality-many key if no values are present")))
+  (testing "about joins"
+    (is (= {:foo/bar {:bar/uuid "ccc"}}
+           (check
+             '(defrule basic-join-rule
+                :query [{:foo/bar [:bar/uuid]}]
+                :from ?eid
+                :where
+                [EAV (= e ?eid) (= a :foo/bar)])
+             [[:r :foo/bar 10]
+              [10 :bar/uuid "ccc"]]))
+        "returns joined values")
+    (is (= {:a/b {:b/c {:c/d "world"}}}
+           (check
+             '(defrule nested-join-rule
+                :query [{:a/b [{:b/c [:c/d]}]}]
+                :from ?eid
+                :where
+                [EAV (= e ?eid) (= a :a/b)])
+             [[:r :a/b 60]
+              [60 :b/c 70]
+              [70 :c/d "world"]]))
+        "returns nested join values")
+    (is (= {:foo/many-valued [{:bar/name "b11"}
+                              {:bar/name "b12"}]}
+           (check
+             '(defrule many-valued-join
+                :query [{:foo/many-valued [:bar/name]}]
+                :from ?eid
+                :where
+                [EAV (= e ?eid) (= a :foo/uuid) (= v "aaa")])
+             [[:foo/many-valued :db/cardinality :db.cardinality/many]
+              [:r :foo/uuid "aaa"]
+              [:r :foo/many-valued 11]
+              [:r :foo/many-valued 12]
+              [11 :bar/name "b11"]
+              [12 :bar/name "b12"]]))
+        "returns collections for many-valued nested join values")
+    ;; This was producing twice as many `{:bar/name "bXX"}` maps because
+    ;; the join rules were generating a result for each root times each
+    ;; entity, instead of just for each entity.
+    (is (= {:foo/many-valued [{:bar/name "b11"}
+                              {:bar/name "b12"}]}
+           (check
+             '(defrule many-valued-join
+                :query [{:foo/many-valued [:bar/name]}]
+                :from ?eid
+                :where
+                [EAV (= e ?eid) (= a :foo/uuid)])
+             [[:foo/many-valued :db/cardinality :db.cardinality/many]
+              [:r :foo/uuid "aaa"]
+              [:r :foo/many-valued 11]
+              [:r :foo/many-valued 12]
+              [99 :foo/uuid "bbb"]
+              [99 :foo/many-valued 11]
+              [99 :foo/many-valued 12]
+              [11 :bar/name "b11"]
+              [12 :bar/name "b12"]]))
+        "regression: shared subtrees aren't multiplied"))
+  (testing "about unions")
+    ;(future-fact "returns values from all branches of the union"))
+  (testing "about idents"))
+    ;(future-fact "returns values from the specified object")))

@@ -19,7 +19,5 @@
                  [com.cerner/clara-rules "0.21.1"]
                  [edn-query-language/eql "2025.09.27"]]
   :profiles {:dev
-             {:dependencies [[midje "1.9.6"]
-                             [zprint "0.4.15"]]
-              :plugins      [[lein-midje "3.2.1"]]}}
+             {:dependencies [[zprint "0.4.15"]]}}
   :repl-options {:init-ns dev})
