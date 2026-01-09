@@ -15,8 +15,8 @@
                   ["vcs" "commit"]
                   ["vcs" "push"]]
   :dependencies [[org.clojure/clojure "1.12.4"]
-                 [clyfe/clara-eav "0.1.6"]
-                 [com.cerner/clara-rules "0.19.0"]
+                 [clyfe/clara-eav "0.1.9"]
+                 [com.cerner/clara-rules "0.21.1"]
                  [edn-query-language/eql "0.0.3"]]
   :profiles {:dev
              {:dependencies [[midje "1.9.6"]
