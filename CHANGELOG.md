@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Bump Clojure, clyfe/clara-eav, com.cerner/clara-rules, and edn-query-language/eql
+  dependencies.
+
 ## [0.1.3]
 ### Changes
 - Remove handling of reversed attributes.  Instead of presuming how they
