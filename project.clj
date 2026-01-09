@@ -14,7 +14,7 @@
                   ["change" "version" "leiningen.release/bump-version"]
                   ["vcs" "commit"]
                   ["vcs" "push"]]
-  :dependencies [[org.clojure/clojure "1.10.0"]
+  :dependencies [[org.clojure/clojure "1.12.4"]
                  [clyfe/clara-eav "0.1.6"]
                  [com.cerner/clara-rules "0.19.0"]
                  [edn-query-language/eql "0.0.3"]]
