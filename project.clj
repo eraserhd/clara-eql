@@ -17,7 +17,7 @@
   :dependencies [[org.clojure/clojure "1.12.4"]
                  [clyfe/clara-eav "0.1.9"]
                  [com.cerner/clara-rules "0.21.1"]
-                 [edn-query-language/eql "0.0.3"]]
+                 [edn-query-language/eql "2025.09.27"]]
   :profiles {:dev
              {:dependencies [[midje "1.9.6"]
                              [zprint "0.4.15"]]
