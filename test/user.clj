@@ -1,8 +1,14 @@
-(ns dev
+(ns user
   (:require
+   [clojure.repl :refer [apropos doc dir source find-doc]]
+   [clojure.tools.namespace.repl :refer [refresh]]
    [clojure.walk]
+   [cognitect.test-runner.api]
    [zprint.core :as zp]
    [net.eraserhead.clara-eql.core :refer [defrule]]))
+
+(defn run-tests
+  ([] (cognitect.test-runner.api/test {})))
 
 (defn- make-symbols-easier-to-read [code]
   (clojure.walk/postwalk
