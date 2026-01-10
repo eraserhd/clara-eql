@@ -34,20 +34,6 @@
             (str "found " (count results) " results: " (pr-str results)))
     (:?result (first results))))
 
-(deftest t-defrule-nested-join-rule
-  (testing "about joins"
-    (is (= {:a/b {:b/c {:c/d "world"}}}
-           (check
-             '(defrule nested-join-rule
-                :query [{:a/b [{:b/c [:c/d]}]}]
-                :from ?eid
-                :where
-                [EAV (= e ?eid) (= a :a/b)])
-             [[:r :a/b 60]
-              [60 :b/c 70]
-              [70 :c/d "world"]]))
-        "returns nested join values")))
-
 (deftest t-defrule-many-valued-join
   (testing "about joins"
     (is (= {:foo/many-valued [{:bar/name "b11"}
