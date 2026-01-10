@@ -6,7 +6,7 @@
    [net.eraserhead.clara-eql.test-helpers :as t])
   (:import
    (clara_eav.eav EAV)
-   (net.eraserhead.clara_eql.core Candidate QueryResult)))
+   (net.eraserhead.clara_eql.core QueryResult)))
 
 (r/defquery query-results
   [:?query]
