@@ -3,8 +3,8 @@
    [clara-eav.eav :as eav]
    [clojure.test :refer [deftest testing is]]
    [net.eraserhead.clara-eql.eav-map :refer [eav-map]])
-  (:import
-   (clara_eav.eav EAV)))
+  #?(:clj (:import
+           (clara_eav.eav EAV))))
 
 (def initial-value (:initial-value eav-map))
 (def reduce-fn (:reduce-fn eav-map))

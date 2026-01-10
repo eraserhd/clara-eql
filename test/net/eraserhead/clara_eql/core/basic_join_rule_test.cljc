@@ -2,11 +2,11 @@
   (:require
    [clara.rules :as r]
    [clojure.test :refer [deftest testing is]]
-   [net.eraserhead.clara-eql.core :refer :all]
+   [net.eraserhead.clara-eql.core :refer [defrule]]
    [net.eraserhead.clara-eql.test-helpers :as t])
-  (:import
-   (clara_eav.eav EAV)
-   (net.eraserhead.clara_eql.core QueryResult)))
+  #?(:clj (:import
+           (clara_eav.eav EAV)
+           (net.eraserhead.clara_eql.core QueryResult))))
 
 (r/defquery query-results
   [:?query]

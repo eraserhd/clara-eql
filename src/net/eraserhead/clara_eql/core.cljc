@@ -2,11 +2,11 @@
   (:require
    [clara.rules :as r]
    [clara.rules.accumulators :as acc]
-   [clara-eav.eav :refer :all]
+   [clara-eav.eav]
    [clojure.spec.alpha :as s]
    [edn-query-language.core :as eql])
-  (:import
-   (clara_eav.eav EAV)))
+  #?(:clj (:import
+           (clara_eav.eav EAV))))
 
 (defrecord Candidate [query e])
 (defrecord QueryResult [query e result])

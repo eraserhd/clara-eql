@@ -1,11 +1,11 @@
 (ns net.eraserhead.clara-eql.pull
   (:require
-   [clara.rules :refer :all]
+   [clara.rules :refer [defquery]]
    [clara-eav.eav :as eav]
    [edn-query-language.core :as eql]
    [net.eraserhead.clara-eql.eav-map :as eav-map])
-  (:import
-   (clara_eav.eav EAV)))
+  #?(:clj (:import
+           (clara_eav.eav EAV))))
 
 (defquery eav-map
   []
