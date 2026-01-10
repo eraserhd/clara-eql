@@ -1,5 +1,5 @@
 {:deps         true
- :source-paths ["src" "test"]
  :builds       {:test {:target    :node-test
                        :output-to "target/node-test.js"
+                       :ns-regexp "-test$"
                        :autorun   true}}}
