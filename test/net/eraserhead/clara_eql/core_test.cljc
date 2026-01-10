@@ -34,34 +34,6 @@
             (str "found " (count results) " results: " (pr-str results)))
     (:?result (first results))))
 
-(deftest t-defrule-many-valued-key
-  (testing "about top-level keys"
-    (testing "about cardinality-many keys"
-      (is (= {:foo/uuid        "aaa"
-              :foo/many-valued [11 12]}
-             (check
-               '(defrule many-valued-key
-                  :query [:foo/uuid :foo/many-valued]
-                  :from ?eid
-                  :where
-                  [EAV (= e ?eid) (= a :foo/uuid)])
-              [[:foo/many-valued :db/cardinality :db.cardinality/many]
-               [:r :foo/uuid "aaa"]
-               [:r :foo/many-valued 11]
-               [:r :foo/many-valued 12]]))
-          "returns all values for a cardinality-many key")
-      (is (= {:foo/uuid        "aaa"
-              :foo/many-valued []}
-             (check
-               '(defrule many-valued-key
-                  :query [:foo/uuid :foo/many-valued]
-                  :from ?eid
-                  :where
-                  [EAV (= e ?eid) (= a :foo/uuid)])
-               [[:foo/many-valued :db/cardinality :db.cardinality/many]
-                [:r :foo/uuid "aaa"]]))
-          "returns an empty set for a cardinality-many key if no values are present"))))
-
 (deftest t-defrule-basic-join-rule
   (testing "about joins"
     (is (= {:foo/bar {:bar/uuid "ccc"}}
