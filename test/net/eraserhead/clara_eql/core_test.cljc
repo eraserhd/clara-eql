@@ -34,25 +34,6 @@
             (str "found " (count results) " results: " (pr-str results)))
     (:?result (first results))))
 
-(deftest t-defrule-many-valued-join
-  (testing "about joins"
-    (is (= {:foo/many-valued [{:bar/name "b11"}
-                              {:bar/name "b12"}]}
-           (check
-             '(defrule many-valued-join
-                :query [{:foo/many-valued [:bar/name]}]
-                :from ?eid
-                :where
-                [EAV (= e ?eid) (= a :foo/uuid) (= v "aaa")])
-             [[:foo/many-valued :db/cardinality :db.cardinality/many]
-              [:r :foo/uuid "aaa"]
-              [:r :foo/many-valued 11]
-              [:r :foo/many-valued 12]
-              [11 :bar/name "b11"]
-              [12 :bar/name "b12"]]))
-        "returns collections for many-valued nested join values")))
-
-
 (deftest t-defrule-many-valued-join2
   (testing "about joins"
     ;; This was producing twice as many `{:bar/name "bXX"}` maps because
