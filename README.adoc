@@ -1,11 +1,12 @@
-# clara-eql
+= clara-eql
 
 Generate Clara rules to collect data from EDN Query Language queries.
-[![CircleCI](https://circleci.com/gh/eraserhd/clara-eql.svg?style=svg)](https://circleci.com/gh/eraserhd/clara-eql)
+image::https://circleci.com/gh/eraserhd/clara-eql.svg?style=svg[link=https://circleci.com/gh/eraserhd/clara-eql]
 
-## Usage
+== Usage
 
-```clojure
+[source,clojure]
+----
 (require '[net.eraserhead.clara-eql :as clara-eql])
 
 (clara-eql/defrule test-query
@@ -23,34 +24,34 @@ Generate Clara rules to collect data from EDN Query Language queries.
   [clara-eql/QueryResult (= root 42) (= query 'test-query) (= data ?data)]
   =>
   (println "Data is now: " (pr-str ?data)))
-```
+----
 
-## Assumptions
+== Assumptions
 
-### All data is stored in EAV triples, in [clara_eav.eav.EAV] records
+=== All data is stored in EAV triples, in https://cljdoc.org/d/clyfe/clara-eav/0.1.6/api/clara-eav.eav#EAV[clara_eav.eav.EAV] records
 
-[clara_eav.eav.EAV]: https://cljdoc.org/d/clyfe/clara-eav/0.1.6/api/clara-eav.eav#EAV
+Nothing else from clara-eav is required, but using the same type makes the libraries compatible.
 
-### Attribute values in the EAV triples are keywords
+=== Attribute values in the EAV triples are keywords
 
 Well, they don't have to be keywords, specifically, but this library does not
 handle Datomic-style indirection where a number represents an attribute and a
 keyword is assigned with a `:db/ident` property.
 
-### Many-valued Attributes
+=== Many-valued Attributes
 
 The shape of the pull result differs for many-valued attributes.  `clara-eql`
 assumes these attributes have a fact
 `(->EAV attr-name :db/cardinality :db.cardinality/many)`.
 
-### Identity Attributes
+=== Identity Attributes
 
 Identity attributes can be used for entity references, such as
 `[:person/uuid #uuid "3fec670d-da20-4171-a96d-e5852be05ded"]`.  `clara-eql`
 assumes identity attributes have a fact
 `(->EAV attr-name :db/unique :db.unique/identity)`.
 
-## License
+== License
 
 Copyright © 2019 Jason Felice
 
