@@ -13,3 +13,4 @@ pom.xml.asc
 /.cpcache
 /result
 /.direnv
+/.shadow-cljs

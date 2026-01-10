@@ -1,28 +1,19 @@
 {
-  description = "TODO: fill me in";
+  description = "clara-eql: Generate Clara rules to collect data from EDN Query Language queries.";
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
+    nixpkgs.url = "github:NixOS/nixpkgs";
   };
   outputs = { self, nixpkgs, flake-utils }:
     (flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        clara-eql = pkgs.callPackage ./derivation.nix {};
       in {
-        packages = {
-          default = clara-eql;
-          inherit clara-eql;
+        devShells.default = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            clojure
+            nodejs_24
+          ];
         };
-        checks = {
-          test = pkgs.runCommandNoCC "clara-eql-test" {} ''
-            mkdir -p $out
-            : ${clara-eql}
-          '';
-        };
-    })) // {
-      overlays.default = final: prev: {
-        clara-eql = prev.callPackage ./derivation.nix {};
-      };
-    };
+    }));
 }
