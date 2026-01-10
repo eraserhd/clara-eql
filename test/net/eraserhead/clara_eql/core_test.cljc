@@ -6,14 +6,11 @@
    [clara-eav.eav :as eav]
    [clojure.test :refer [deftest testing is]]
    [clojure.pprint]
-   [clojure.spec.test.alpha]
    [net.eraserhead.clara-eql.core :refer :all]
    [net.eraserhead.clara-eql.test-helpers :as t])
   (:import
    (clara_eav.eav EAV)
    (net.eraserhead.clara_eql.core Candidate QueryResult)))
-
-(clojure.spec.test.alpha/instrument)
 
 (r/defquery query-results
   [:?query]
