@@ -1,7 +1,6 @@
 (ns net.eraserhead.clara-eql.core.basic-rule-test
   (:require
    [clara.rules :as r]
-   [clara-eav.eav :as eav]
    [clojure.test :refer [deftest testing is]]
    [net.eraserhead.clara-eql.core :refer :all]
    [net.eraserhead.clara-eql.test-helpers :as t])
@@ -13,17 +12,6 @@
   [:?query]
   [QueryResult (= e :r) (= query ?query) (= result ?result)])
 
-(defn- rule-result [rule-name facts]
-  (let [session (-> (r/mk-session (symbol (namespace rule-name)))
-                    (r/insert-all (map (partial apply eav/->EAV) facts))
-                    (r/fire-rules)
-                    t/dump-facts)
-        results (map #(update % :?result t/sort-multi-values)
-                     (r/query session query-results :?query rule-name))]
-    (assert (= 1 (count results))
-            (str "found " (count results) " results: " (pr-str results)))
-    (:?result (first results))))
-
 (defrule basic-rule
   "Some basic rule"
   {:salience 100}
@@ -34,5 +22,5 @@
 
 (deftest t-defrule-basic-rule
   (testing "about single-cardinality keys"
-    (is (= {:foo/uuid "aaa"} (rule-result `basic-rule [[:r :foo/uuid "aaa"]]))
+    (is (= {:foo/uuid "aaa"} (t/rule-result query-results `basic-rule [[:r :foo/uuid "aaa"]]))
         "returns a result when all values are present")))

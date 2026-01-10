@@ -1,5 +1,7 @@
 (ns net.eraserhead.clara-eql.test-helpers
   (:require
+   [clara.rules :as r]
+   [clara-eav.eav :as eav]
    [clara.tools.inspect :as inspect]
    [clojure.pprint]
    [clojure.spec.test.alpha]
@@ -34,3 +36,14 @@
                  fact)))
         clojure.pprint/print-table)))
   session)
+
+(defn rule-result [query-results rule-name facts]
+  (let [session (-> (r/mk-session (symbol (namespace rule-name)))
+                    (r/insert-all (map (partial apply eav/->EAV) facts))
+                    (r/fire-rules)
+                    dump-facts)
+        results (map #(update % :?result sort-multi-values)
+                     (r/query session query-results :?query rule-name))]
+    (assert (= 1 (count results))
+            (str "found " (count results) " results: " (pr-str results)))
+    (:?result (first results))))
