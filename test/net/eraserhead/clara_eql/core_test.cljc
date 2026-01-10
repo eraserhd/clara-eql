@@ -34,30 +34,35 @@
             (str "found " (count results) " results: " (pr-str results)))
     (:?result (first results))))
 
-(deftest t-defrule
+(deftest t-defrule-basic-rule
+  (testing "about single-cardinality keys"
+    (is (= {:foo/uuid "aaa"}
+           (check
+             '(defrule basic-rule
+                "Some basic rule"
+                {:salience 100}
+                :query [:foo/uuid]
+                :from ?eid
+                :where
+                [EAV (= e ?eid) (= a :foo/uuid)])
+             [[:r :foo/uuid "aaa"]]))
+        "returns a result when all values are present")))
+
+(deftest t-defule-missing-property-value
+  (testing "about single-cardinality keys"
+    (is (= {:foo/uuid "aaa"}
+           (check
+             '(defrule missing-property-rule
+                "Missing property rule"
+                :query [:foo/uuid :foo/missing]
+                :from ?eid
+                :where
+                [EAV (= e ?eid) (= a :foo/uuid)])
+            [[:r :foo/uuid "aaa"]]))
+        "returns a result when root is missing a key")))
+
+(deftest t-defrule-many-valued-key
   (testing "about top-level keys"
-    (testing "about single-cardinality keys"
-      (is (= {:foo/uuid "aaa"}
-             (check
-               '(defrule basic-rule
-                  "Some basic rule"
-                  {:salience 100}
-                  :query [:foo/uuid]
-                  :from ?eid
-                  :where
-                  [EAV (= e ?eid) (= a :foo/uuid)])
-               [[:r :foo/uuid "aaa"]]))
-          "returns a result when all values are present")
-      (is (= {:foo/uuid "aaa"}
-             (check
-               '(defrule missing-property-rule
-                  "Missing property rule"
-                  :query [:foo/uuid :foo/missing]
-                  :from ?eid
-                  :where
-                  [EAV (= e ?eid) (= a :foo/uuid)])
-              [[:r :foo/uuid "aaa"]]))
-          "returns a result when root is missing a key"))
     (testing "about cardinality-many keys"
       (is (= {:foo/uuid        "aaa"
               :foo/many-valued [11 12]}
@@ -82,7 +87,9 @@
                   [EAV (= e ?eid) (= a :foo/uuid)])
                [[:foo/many-valued :db/cardinality :db.cardinality/many]
                 [:r :foo/uuid "aaa"]]))
-          "returns an empty set for a cardinality-many key if no values are present")))
+          "returns an empty set for a cardinality-many key if no values are present"))))
+
+(deftest t-defrule-basic-join-rule
   (testing "about joins"
     (is (= {:foo/bar {:bar/uuid "ccc"}}
            (check
@@ -93,7 +100,10 @@
                 [EAV (= e ?eid) (= a :foo/bar)])
              [[:r :foo/bar 10]
               [10 :bar/uuid "ccc"]]))
-        "returns joined values")
+        "returns joined values")))
+
+(deftest t-defrule-nested-join-rule
+  (testing "about joins"
     (is (= {:a/b {:b/c {:c/d "world"}}}
            (check
              '(defrule nested-join-rule
@@ -104,7 +114,10 @@
              [[:r :a/b 60]
               [60 :b/c 70]
               [70 :c/d "world"]]))
-        "returns nested join values")
+        "returns nested join values")))
+
+(deftest t-defrule-many-valued-join
+  (testing "about joins"
     (is (= {:foo/many-valued [{:bar/name "b11"}
                               {:bar/name "b12"}]}
            (check
@@ -119,14 +132,18 @@
               [:r :foo/many-valued 12]
               [11 :bar/name "b11"]
               [12 :bar/name "b12"]]))
-        "returns collections for many-valued nested join values")
+        "returns collections for many-valued nested join values")))
+
+
+(deftest t-defrule-many-valued-join2
+  (testing "about joins"
     ;; This was producing twice as many `{:bar/name "bXX"}` maps because
     ;; the join rules were generating a result for each root times each
     ;; entity, instead of just for each entity.
     (is (= {:foo/many-valued [{:bar/name "b11"}
                               {:bar/name "b12"}]}
            (check
-             '(defrule many-valued-join
+             '(defrule many-valued-join2
                 :query [{:foo/many-valued [:bar/name]}]
                 :from ?eid
                 :where
@@ -140,7 +157,9 @@
               [99 :foo/many-valued 12]
               [11 :bar/name "b11"]
               [12 :bar/name "b12"]]))
-        "regression: shared subtrees aren't multiplied"))
+        "regression: shared subtrees aren't multiplied")))
+
+(deftest t-defrule
   (testing "about unions")
     ;(future-fact "returns values from all branches of the union"))
   (testing "about idents"))
