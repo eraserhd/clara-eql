@@ -1,12 +1,15 @@
 (ns net.eraserhead.clara-eql.pull-test
+  #?(:cljs (:require-macros [clara.rules :as r]))
   (:require
    [clara.rules :as r]
    [clara-eav.eav :as eav]
    [clojure.test :refer [deftest testing is]]
    [net.eraserhead.clara-eql.pull :as pull]))
 
+(r/defsession empty-session 'net.eraserhead.clara-eql.pull)
+
 (deftest t-pull
-  (let [session (-> (r/mk-session 'net.eraserhead.clara-eql.pull)
+  (let [session (-> empty-session
                     (r/insert
                      (eav/->EAV 10 :foo/uuid "aaa")
                      (eav/->EAV 10 :foo/name "a-name")
