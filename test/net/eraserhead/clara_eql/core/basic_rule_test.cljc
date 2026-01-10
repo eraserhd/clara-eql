@@ -15,8 +15,8 @@
 
 (def ^:private this-ns *ns*)
 
-(defn- check [rule facts]
-  (let [rule-name (symbol (str (ns-name this-ns)) (str (second rule)))
+(defn- check [rule-name facts]
+  (let [rule-name (symbol (str (ns-name this-ns)) (str rule-name))
         session (-> (r/mk-session (ns-name this-ns))
                     (r/insert-all (map (partial apply eav/->EAV) facts))
                     (r/fire-rules)
@@ -38,13 +38,5 @@
 (deftest t-defrule-basic-rule
   (testing "about single-cardinality keys"
     (is (= {:foo/uuid "aaa"}
-           (check
-             '(defrule basic-rule
-                "Some basic rule"
-                {:salience 100}
-                :query [:foo/uuid]
-                :from ?eid
-                :where
-                [EAV (= e ?eid) (= a :foo/uuid)])
-             [[:r :foo/uuid "aaa"]]))
+           (check 'basic-rule [[:r :foo/uuid "aaa"]]))
         "returns a result when all values are present")))
