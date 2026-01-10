@@ -7,7 +7,8 @@
    [clojure.test :refer [deftest testing is]]
    [clojure.pprint]
    [clojure.spec.test.alpha]
-   [net.eraserhead.clara-eql.core :refer :all])
+   [net.eraserhead.clara-eql.core :refer :all]
+   [net.eraserhead.clara-eql.test-helpers :as t])
   (:import
    (clara_eav.eav EAV)
    (net.eraserhead.clara_eql.core Candidate QueryResult)))
@@ -17,14 +18,6 @@
 (r/defquery query-results
   [:?query]
   [QueryResult (= e :r) (= query ?query) (= result ?result)])
-
-(defn- sort-multi-values [result]
-  (clojure.walk/postwalk
-   (fn [x]
-     (if (and (vector? x) (not (map-entry? x)))
-       (->> x (map pr-str) sort (map read-string) vec)
-       x))
-   result))
 
 (def ^:dynamic *dump-session* false)
 (def ^:private this-ns *ns*)
@@ -59,7 +52,7 @@
                     (r/insert-all (map (partial apply eav/->EAV) facts))
                     (r/fire-rules)
                     dump-facts)
-        results (map #(update % :?result sort-multi-values)
+        results (map #(update % :?result t/sort-multi-values)
                      (r/query session query-results :?query rule-name))]
     (assert (= 1 (count results))
             (str "found " (count results) " results: " (pr-str results)))
