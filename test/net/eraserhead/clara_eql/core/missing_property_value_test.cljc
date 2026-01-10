@@ -20,8 +20,10 @@
  :where
  [EAV (= e ?eid) (= a :foo/uuid)])
 
+(r/defsession empty-session 'net.eraserhead.clara-eql.core.missing-property-value-test)
+
 (deftest t-defule-missing-property-value
   (testing "about single-cardinality keys"
     (is (= {:foo/uuid "aaa"}
-           (t/rule-result query-results `missing-property-rule [[:r :foo/uuid "aaa"]]))
+           (t/rule-result empty-session query-results `missing-property-rule [[:r :foo/uuid "aaa"]]))
         "returns a result when root is missing a key")))

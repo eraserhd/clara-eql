@@ -37,8 +37,8 @@
         clojure.pprint/print-table)))
   session)
 
-(defn rule-result [query-results rule-name facts]
-  (let [session (-> (r/mk-session (symbol (namespace rule-name)))
+(defn rule-result [empty-session query-results rule-name facts]
+  (let [session (-> empty-session
                     (r/insert-all (map (partial apply eav/->EAV) facts))
                     (r/fire-rules)
                     dump-facts)

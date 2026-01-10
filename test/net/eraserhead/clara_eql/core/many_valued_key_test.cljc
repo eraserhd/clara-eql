@@ -19,12 +19,15 @@
   :where
   [EAV (= e ?eid) (= a :foo/uuid)])
 
+(r/defsession empty-session 'net.eraserhead.clara-eql.core.many-valued-key-test)
+
 (deftest t-defrule-many-valued-key
   (testing "about top-level keys"
     (testing "about cardinality-many keys"
       (is (= {:foo/uuid        "aaa"
               :foo/many-valued [11 12]}
              (t/rule-result
+              empty-session
               query-results
               `many-valued-key
               [[:foo/many-valued :db/cardinality :db.cardinality/many]
@@ -35,6 +38,7 @@
       (is (= {:foo/uuid        "aaa"
               :foo/many-valued []}
              (t/rule-result
+              empty-session
               query-results
               `many-valued-key
                [[:foo/many-valued :db/cardinality :db.cardinality/many]

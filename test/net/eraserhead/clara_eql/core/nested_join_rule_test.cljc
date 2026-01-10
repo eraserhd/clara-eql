@@ -19,10 +19,13 @@
   :where
   [EAV (= e ?eid) (= a :a/b)])
 
+(r/defsession empty-session 'net.eraserhead.clara-eql.core.nested-join-rule-test)
+
 (deftest t-defrule-nested-join-rule
   (testing "about joins"
     (is (= {:a/b {:b/c {:c/d "world"}}}
            (t/rule-result
+            empty-session
             query-results
             `nested-join-rule
             [[:r :a/b 60]

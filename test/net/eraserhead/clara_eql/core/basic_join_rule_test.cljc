@@ -19,10 +19,13 @@
   :where
   [EAV (= e ?eid) (= a :foo/bar)])
 
+(r/defsession empty-session 'net.eraserhead.clara-eql.core.basic-join-rule-test)
+
 (deftest t-defrule-basic-join-rule
   (testing "about joins"
     (is (= {:foo/bar {:bar/uuid "ccc"}}
            (t/rule-result
+            empty-session
             query-results
             `basic-join-rule
             [[:r :foo/bar 10]

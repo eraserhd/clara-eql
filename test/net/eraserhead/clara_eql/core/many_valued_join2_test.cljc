@@ -19,6 +19,8 @@
   :where
   [EAV (= e ?eid) (= a :foo/uuid)])
 
+(r/defsession empty-session 'net.eraserhead.clara-eql.core.many-valued-join2-test)
+
 (deftest t-defrule-many-valued-join2
   (testing "about joins"
     ;; This was producing twice as many `{:bar/name "bXX"}` maps because
@@ -27,6 +29,7 @@
     (is (= {:foo/many-valued [{:bar/name "b11"}
                               {:bar/name "b12"}]}
            (t/rule-result
+            empty-session
             query-results
             `many-valued-join2
             [[:foo/many-valued :db/cardinality :db.cardinality/many]
