@@ -2,10 +2,8 @@
   (:require
    [clara.rules :as r]
    [clara.rules.accumulators :as acc]
-   [clara.tools.inspect :as inspect]
    [clara-eav.eav :as eav]
    [clojure.test :refer [deftest testing is]]
-   [clojure.pprint]
    [net.eraserhead.clara-eql.core :refer :all]
    [net.eraserhead.clara-eql.test-helpers :as t])
   (:import
@@ -16,26 +14,7 @@
   [:?query]
   [QueryResult (= e :r) (= query ?query) (= result ?result)])
 
-(def ^:dynamic *dump-session* false)
 (def ^:private this-ns *ns*)
-
-(defn- dump-facts [session]
-  (when *dump-session*
-    (println "\n\n================= Fact Dump ====================")
-    (doseq [[kind facts] (->> (inspect/inspect session)
-                              :insertions
-                              (mapcat val)
-                              (map :fact)
-                              (group-by class))]
-      (print (str "\n" (.getSimpleName kind) "::"))
-      (->> facts
-        (map #(into {} %))
-        (map (fn [fact]
-               (if (contains? fact :query)
-                 (update fact :query name)
-                 fact)))
-        clojure.pprint/print-table)))
-  session)
 
 (defn- check [rule facts]
   ;; Unmap other rules first to make dump-facts nice
@@ -48,7 +27,7 @@
         session (-> (r/mk-session 'net.eraserhead.clara-eql.core-test)
                     (r/insert-all (map (partial apply eav/->EAV) facts))
                     (r/fire-rules)
-                    dump-facts)
+                    t/dump-facts)
         results (map #(update % :?result t/sort-multi-values)
                      (r/query session query-results :?query rule-name))]
     (assert (= 1 (count results))
