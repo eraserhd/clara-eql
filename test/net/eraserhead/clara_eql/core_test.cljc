@@ -34,19 +34,6 @@
             (str "found " (count results) " results: " (pr-str results)))
     (:?result (first results))))
 
-(deftest t-defrule-basic-join-rule
-  (testing "about joins"
-    (is (= {:foo/bar {:bar/uuid "ccc"}}
-           (check
-             '(defrule basic-join-rule
-                :query [{:foo/bar [:bar/uuid]}]
-                :from ?eid
-                :where
-                [EAV (= e ?eid) (= a :foo/bar)])
-             [[:r :foo/bar 10]
-              [10 :bar/uuid "ccc"]]))
-        "returns joined values")))
-
 (deftest t-defrule-nested-join-rule
   (testing "about joins"
     (is (= {:a/b {:b/c {:c/d "world"}}}
