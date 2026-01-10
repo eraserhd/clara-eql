@@ -1,7 +1,7 @@
 = clara-eql
 
 Generate Clara rules to collect data from EDN Query Language queries.
-image::https://circleci.com/gh/eraserhd/clara-eql.svg?style=svg[link=https://circleci.com/gh/eraserhd/clara-eql]
+image:https://circleci.com/gh/eraserhd/clara-eql.svg?style=svg[link=https://circleci.com/gh/eraserhd/clara-eql]
 
 == Usage
 
