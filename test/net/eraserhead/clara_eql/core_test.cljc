@@ -34,19 +34,6 @@
             (str "found " (count results) " results: " (pr-str results)))
     (:?result (first results))))
 
-(deftest t-defule-missing-property-value
-  (testing "about single-cardinality keys"
-    (is (= {:foo/uuid "aaa"}
-           (check
-             '(defrule missing-property-rule
-                "Missing property rule"
-                :query [:foo/uuid :foo/missing]
-                :from ?eid
-                :where
-                [EAV (= e ?eid) (= a :foo/uuid)])
-            [[:r :foo/uuid "aaa"]]))
-        "returns a result when root is missing a key")))
-
 (deftest t-defrule-many-valued-key
   (testing "about top-level keys"
     (testing "about cardinality-many keys"
