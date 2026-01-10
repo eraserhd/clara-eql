@@ -13,10 +13,8 @@
   [:?query]
   [QueryResult (= e :r) (= query ?query) (= result ?result)])
 
-(def ^:private this-ns *ns*)
-
 (defn- check [rule-name facts]
-  (let [session (-> (r/mk-session (ns-name this-ns))
+  (let [session (-> (r/mk-session (symbol (namespace rule-name)))
                     (r/insert-all (map (partial apply eav/->EAV) facts))
                     (r/fire-rules)
                     t/dump-facts)
@@ -36,6 +34,5 @@
 
 (deftest t-defrule-basic-rule
   (testing "about single-cardinality keys"
-    (is (= {:foo/uuid "aaa"}
-           (check `basic-rule [[:r :foo/uuid "aaa"]]))
+    (is (= {:foo/uuid "aaa"} (check `basic-rule [[:r :foo/uuid "aaa"]]))
         "returns a result when all values are present")))
