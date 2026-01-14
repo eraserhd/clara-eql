@@ -5,8 +5,8 @@
    [clara-eav.eav]
    [clojure.spec.alpha :as s]
    [edn-query-language.core :as eql])
-  #?(:clj (:import
-           (clara_eav.eav EAV))))
+  #?(:clj  (:import  (clara_eav.eav EAV))
+     :cljs (:require [clara-eav.eav :refer [EAV]])))
 
 (defrecord Candidate [query e])
 (defrecord QueryResult [query e result])

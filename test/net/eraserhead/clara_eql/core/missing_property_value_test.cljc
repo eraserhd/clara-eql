@@ -1,13 +1,17 @@
 (ns net.eraserhead.clara-eql.core.missing-property-value-test
-  #?(:cljs (:require-macros [net.eraserhead.clara-eql.core :refer [defrule]]))
+  #?(:cljs
+     (:require-macros
+      [net.eraserhead.clara-eql.core :refer [defrule]]
+      [clara.rules :as r]))
   (:require
    [clara.rules :as r]
    [clojure.test :refer [deftest testing is]]
-   #?(:clj [net.eraserhead.clara-eql.core :refer [defrule]])
+   #?(:clj  [net.eraserhead.clara-eql.core :refer [defrule]])
    [net.eraserhead.clara-eql.test-helpers :as t])
-  #?(:clj (:import
-           (clara_eav.eav EAV)
-           (net.eraserhead.clara_eql.core QueryResult))))
+  #?(:clj  (:import (clara_eav.eav EAV))
+     :cljs (:require [clara-eav.eav :refer [EAV]]))
+  #?(:clj  (:import (net.eraserhead.clara_eql.core QueryResult))
+     :cljs (:require [net.eraserhead.clara-eql.core :refer [QueryResult]])))
 
 (r/defquery query-results
   [:?query]
