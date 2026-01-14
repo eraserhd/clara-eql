@@ -4,7 +4,7 @@
    [clara-eav.eav :as eav]
    [edn-query-language.core :as eql]
    [net.eraserhead.clara-eql.eav-map :as eav-map])
-  #?(:clj  (:import (clara_eav.eav EAV))
+  #?(:clj  (:import  (clara_eav.eav EAV))
      :cljs (:require [clara-eav.eav :refer [EAV]])))
 
 (defquery eav-map
