@@ -1,5 +1,4 @@
 (ns net.eraserhead.clara-eql.core.basic-rule-test
-  #?(:cljs (:require-macros [net.eraserhead.clara-eql.core :refer [defrule]]))
   (:require
    [clara.rules :as r]
    [clojure.test :refer [deftest testing is]]

@@ -1,10 +1,9 @@
 (ns net.eraserhead.clara-eql.core.many-valued-join-test
-  #?(:cljs (:require-macros [net.eraserhead.clara-eql.core :refer [defrule]]))
   (:require
    [clara.rules :as r]
    [clojure.test :refer [deftest testing is]]
-   #?(:clj [net.eraserhead.clara-eql.core :refer [defrule]])
    [net.eraserhead.clara-eql.test-helpers :as t])
+  (#?(:clj :require :cljs :require-macros) [net.eraserhead.clara-eql.core :refer [defrule]])
   #?(:clj  (:import  (clara_eav.eav EAV))
      :cljs (:require [clara-eav.eav :refer [EAV]]))
   #?(:clj  (:import  (net.eraserhead.clara_eql.core QueryResult))
