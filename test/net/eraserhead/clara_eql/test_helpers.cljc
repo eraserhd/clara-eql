@@ -3,6 +3,7 @@
    [clara.rules :as r]
    [clara-eav.eav :as eav]
    [clara.tools.inspect :as inspect]
+   #?(:cljs [clojure.edn :refer [read-string]])
    [clojure.pprint]
    [clojure.spec.test.alpha]
    [clojure.walk]))
@@ -26,8 +27,11 @@
                               :insertions
                               (mapcat val)
                               (map :fact)
-                              (group-by class))]
-      (print (str "\n" (.getSimpleName kind) "::"))
+                              (group-by type))]
+      (print (str "\n"
+                  #?(:clj  (.getSimpleName kind)
+                     :cljs (.-name kind))
+                  "::"))
       (->> facts
         (map #(into {} %))
         (map (fn [fact]
