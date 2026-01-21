@@ -13,6 +13,25 @@
 (defrecord SingleAttributeQueryResult [query e a result])
 (defrecord AttributeQueryResult [query e a result])
 
+(defn- cljs-env?
+  "Whether this &env represents a ClojureScript macro expansion."
+  [env]
+  (boolean (:ns env)))
+
+(defn- fact-type
+  "Return the fully qualified symbols for a fact type.
+
+  We need to expand the symbols differently when expanding the macro for Clojure or
+  ClojureScript."
+  [env sym]
+  (if (cljs-env? env)
+    (if (= 'EAV sym)
+      'clara-eav.eav/EAV
+      (symbol "net.eraserhead.clara-eql.core" (name sym)))
+    (if (= 'EAV sym)
+      'clara_eav.eav.EAV
+      (symbol (str "net.eraserhead.clara_eql.core." (name sym))))))
+
 (defn- query-structure [query]
   (transduce
     (filter (comp #{:prop :join} :type))
@@ -40,15 +59,15 @@
          :where      (s/+ any?)))
 
 (defn- candidate-join-subrule
-  [child]
+  [env child]
   `(r/defrule ~(symbol (str (::rule-name child) "__candidates"))
      {:salience ~(::candidate-salience child)}
-     [:exists [Candidate (= ~'query '~(::parent-rule-name child)) (= ~'e ?parent#)]]
-     [:exists [EAV (= ~'e ?parent#) (= ~'a ~(:key child)) (= ~'v ?this#)]]
+     [:exists [~(fact-type env 'Candidate) (= ~'query '~(::parent-rule-name child)) (= ~'e ?parent#)]]
+     [:exists [~(fact-type env 'EAV) (= ~'e ?parent#) (= ~'a ~(:key child)) (= ~'v ?this#)]]
      ~'=>
      (r/insert! (->Candidate '~(::rule-name child) ?this#))))
 
-(defn- candidate-rules [root]
+(defn- candidate-rules [env root]
   (cons
     `(r/defrule ~(symbol (str (::rule-name root) "__candidates"))
        {:salience ~(::candidate-salience root)}
@@ -59,19 +78,19 @@
                 (filter (comp #{:join :root} :type))
                 (mapcat :children)
                 (filter (comp #{:join} :type))
-                (map candidate-join-subrule))
+                (map (partial candidate-join-subrule env)))
               (tree-seq :children :children root))))
 
 (defn- attribute-rule
-  [child]
+  [env child]
   (let [subrule-name        (::rule-name child)
         attribute-rule-name (symbol (str (name subrule-name) "__attribute"))
         attribute           (:key child)]
     `(r/defrule ~attribute-rule-name
        ~@(when-let [properties (::properties child)] [properties])
-       [:exists [Candidate (= ~'query '~(::parent-rule-name child)) (= ~'e ~(::parent-variable child))]]
-       [?many# ~'<- (acc/count) :from [EAV (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
-       [?results# ~'<- (acc/all :result) :from [SingleAttributeQueryResult
+       [:exists [~(fact-type env 'Candidate) (= ~'query '~(::parent-rule-name child)) (= ~'e ~(::parent-variable child))]]
+       [?many# ~'<- (acc/count) :from [~(fact-type env 'EAV) (= ~'e ~attribute) (= ~'a :db/cardinality) (= ~'v :db.cardinality/many)]]
+       [?results# ~'<- (acc/all :result) :from [~(fact-type env 'SingleAttributeQueryResult)
                                                 (= ~'query '~subrule-name)
                                                 (= ~'e ~(::parent-variable child))
                                                 (= ~'a ~attribute)]]
@@ -81,30 +100,30 @@
                       ?results#)]
          (r/insert! (->AttributeQueryResult '~subrule-name ~(::parent-variable child) ~attribute value#))))))
 
-(defn- attribute-rules [root]
+(defn- attribute-rules [env root]
   (sequence (comp
               (filter (comp #{:root :join} :type))
               (mapcat :children)
               (filter (comp #{:prop :join} :type))
-              (map attribute-rule))
+              (map (partial attribute-rule env)))
             (tree-seq :children :children root)))
 
 (defn- attribute-productions
-  [from child-query]
+  [env from child-query]
   (let [{:keys [::rule-name :key ::variable]} child-query]
-    `[AttributeQueryResult (= ~'query '~rule-name) (= ~'e ~from) (= ~'a ~key) (= ~'result ~variable)]))
+    `[~(fact-type env 'AttributeQueryResult) (= ~'query '~rule-name) (= ~'e ~from) (= ~'a ~key) (= ~'result ~variable)]))
 
 (defn- join-rule
-  [query]
+  [env query]
   (let [{:keys [:type :children ::rule-name ::doc ::properties ::variable]} query
         child-productions (->> children
                             (filter (comp #{:prop :join} :type))
-                            (map (partial attribute-productions variable)))]
+                            (map (partial attribute-productions env variable)))]
     (case type
       :root `(r/defrule ~(symbol (name rule-name))
                ~@(when doc [doc])
                ~@(when properties [properties])
-               [:exists [Candidate (= ~'query '~rule-name) (= ~'e ~variable)]]
+               [:exists [~(fact-type env 'Candidate) (= ~'query '~rule-name) (= ~'e ~variable)]]
                ~@child-productions
                ~'=>
                (let [~'result (remove-nil-values ~(query-structure query))]
@@ -112,17 +131,17 @@
       :join `(r/defrule ~(symbol (name rule-name))
                ~@(when doc [doc])
                ~@(when properties [properties])
-               [:exists [Candidate (= ~'query '~rule-name) (= ~'e ~variable)]]
+               [:exists [~(fact-type env 'Candidate) (= ~'query '~rule-name) (= ~'e ~variable)]]
                ~@child-productions
-               [EAV (= ~'e ?parent#) (= ~'a ~(:key query)) (= ~'v ~variable)]
+               [~(fact-type env 'EAV) (= ~'e ?parent#) (= ~'a ~(:key query)) (= ~'v ~variable)]
                ~'=>
                (let [~'result (remove-nil-values ~(query-structure query))]
                  (r/insert! (->SingleAttributeQueryResult '~rule-name ?parent# ~(:key query) ~'result)))))))
 
-(defn- join-rules [root]
+(defn- join-rules [env root]
   (sequence (comp
               (filter (comp #{:root :join} :type))
-              (map join-rule))
+              (map (partial join-rule env)))
             (tree-seq :children :children root)))
 
 (defn- map-nodes [f node]
@@ -195,19 +214,19 @@
     (assoc ::parent-rule-name rule-name)
     (update :children (partial mapv #(add-parent-rule-names % (::rule-name root))))))
 
-(defn- prop-rule [query]
+(defn- prop-rule [env query]
   (let [{:keys [::rule-name ::parent-rule-name ::parent-variable ::variable ::properties]} query]
     `(r/defrule ~(symbol (name rule-name))
        ~@(when properties [properties])
-       [:exists [Candidate (= ~'query '~parent-rule-name) (= ~'e ~parent-variable)]]
-       [:exists [EAV (= ~'e ~parent-variable) (= ~'a ~(:key query)) (= ~'v ~variable)]]
+       [:exists [~(fact-type env 'Candidate) (= ~'query '~parent-rule-name) (= ~'e ~parent-variable)]]
+       [:exists [~(fact-type env 'EAV) (= ~'e ~parent-variable) (= ~'a ~(:key query)) (= ~'v ~variable)]]
        ~'=>
        (r/insert! (->SingleAttributeQueryResult '~rule-name ~parent-variable ~(:key query) ~variable)))))
 
-(defn- prop-rules [root]
+(defn- prop-rules [env root]
   (sequence (comp
               (filter (comp #{:prop} :type))
-              (map prop-rule))
+              (map (partial prop-rule env)))
             (tree-seq :children :children root)))
 
 (s/fdef defrule
@@ -248,7 +267,7 @@
                            (add-rule-names qualified-name)
                            (add-parent-rule-names nil))]
     `(do
-       ~@(candidate-rules query)
-       ~@(prop-rules query)
-       ~@(attribute-rules query)
-       ~@(join-rules query))))
+       ~@(candidate-rules &env query)
+       ~@(prop-rules &env query)
+       ~@(attribute-rules &env query)
+       ~@(join-rules &env query))))
