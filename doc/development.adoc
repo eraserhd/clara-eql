@@ -1,0 +1,22 @@
+= clara-eql development
+
+== Running tests
+
+----
+$ clj -M:test
+$ clj -M:cljs-test
+----
+
+or
+
+----
+$ nix flake check
+----
+
+== Building and Releasing
+
+Update the version string in `build.clj`.
+
+----
+$ clj -T:build release
+----

@@ -31,8 +31,8 @@
             name = "clara-eql-tests";
             src = ./.;
             buildInputs = with pkgs; [
-              git
               clojure
+              git
               nodejs_24
             ];
             buildPhase = ''
