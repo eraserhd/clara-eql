@@ -14,3 +14,4 @@ pom.xml.asc
 /result
 /.direnv
 /.shadow-cljs
+*.pom.asc
