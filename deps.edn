@@ -1,7 +1,7 @@
 {:paths ["src"]
  :deps  {org.clojure/clojure    {:mvn/version "1.12.4"}
          clyfe/clara-eav        {:mvn/version "0.1.9"}
-         com.cerner/clara-rules {:mvn/version "0.21.1"}
+         com.cerner/clara-rules {:mvn/version "0.22.1"}
          edn-query-language/eql {:mvn/version "2025.09.27"}}
 
  :aliases
