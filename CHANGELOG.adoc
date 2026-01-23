@@ -4,6 +4,9 @@ Change Log
 https://github.com/eraserhd/clara-eql/compare/v0.2.0...v0.2.1[Unreleased]
 -------------------------------------------------------------------------
 
+* Ensure vars are valid let names, even when pulling using keywords with
+  periods in them.
+
 https://github.com/eraserhd/clara-eql/compare/v0.1.3...v0.2.0[0.2.0]
 --------------------------------------------------------------------
 
