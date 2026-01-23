@@ -5,6 +5,7 @@
 (defn encode-symbol-char [ch]
   (case ch
    (\.) "_DOT_"
+   (\_) "___"
    (str ch)))
 
 (defn encode-symbol-part [s]
@@ -15,5 +16,5 @@
 (defn key->variable [kw]
   (if-let [n (namespace kw)]
     (symbol (str \? (encode-symbol-part n) "_SLASH_" (encode-symbol-part (name kw))))
-    (symbol (str \? (name kw)))))
+    (symbol (str \? (encode-symbol-part (name kw))))))
 
