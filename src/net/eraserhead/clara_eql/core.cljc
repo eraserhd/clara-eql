@@ -4,7 +4,8 @@
    [clara.rules.accumulators :as acc]
    [clara-eav.eav]
    [clojure.spec.alpha :as s]
-   [edn-query-language.core :as eql])
+   [edn-query-language.core :as eql]
+   [net.eraserhead.clara-eql.symbols :refer [key->variable]])
   #?(:clj  (:import  (clara_eav.eav EAV))
      :cljs (:require [clara-eav.eav :refer [EAV]])))
 
@@ -146,10 +147,7 @@
 
 (defn- map-nodes [f node]
   (f (eql/transduce-children (map f) node)))
-
-(defn- key->variable [kw]
-  (symbol (str \? (namespace kw) \_ (name kw))))
-
+ 
 (defn- nest-salience
   "To avoid retriggering, we prioritize deeper nodes over inner ones, since
   computing the deeper ones causes the inner ones to potentially recompute."
