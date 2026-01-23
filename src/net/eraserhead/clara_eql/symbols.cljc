@@ -4,9 +4,13 @@
 
 (defn encode-symbol-char [ch]
   (case ch
-   (\.) "_DOT_"
-   (\_) "___"
-   (str ch)))
+   (\.)                         "_DOT_"
+   (\_)                         "___"
+   (\* \+ \! \- \' \? \< \> \=) (str ch)
+   (if (or (Character/isDigit ch)
+           (Character/isLetter ch))
+     (str ch)
+     (format "_%02X_" (long ch)))))
 
 (defn encode-symbol-part [s]
   (->> s
