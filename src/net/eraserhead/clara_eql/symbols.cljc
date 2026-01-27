@@ -41,4 +41,3 @@
   (if-let [n (namespace kw)]
     (symbol (str \? (encode-symbol-part n) "_SLASH_" (encode-symbol-part (name kw))))
     (symbol (str \? (encode-symbol-part (name kw))))))
-
